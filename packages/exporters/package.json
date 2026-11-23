@@ -1,0 +1,22 @@
+{
+  "name": "@galbe/exporters",
+  "version": "0.1.0",
+  "description": "Galbe exporters: images (v0.1), video (v0.3), GLB/USDZ (v0.4).",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@galbe/core": "workspace:*",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.187.0"
+  }
+}

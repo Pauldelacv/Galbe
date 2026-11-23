@@ -231,6 +231,19 @@ importers:
         specifier: 11.2.10
         version: 11.2.10
 
+  packages/exporters:
+    dependencies:
+      '@galbe/core':
+        specifier: workspace:*
+        version: link:../core
+      three:
+        specifier: 0.187.0
+        version: 0.187.0
+    devDependencies:
+      '@types/three':
+        specifier: 0.187.0
+        version: 0.187.0
+
 packages:
 
   '@biomejs/biome@2.6.8':
