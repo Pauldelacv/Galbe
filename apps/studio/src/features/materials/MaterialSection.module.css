@@ -1,0 +1,57 @@
+.presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--g-space-2);
+  margin-bottom: var(--g-space-3);
+}
+
+.preset {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--g-space-2);
+  padding: var(--g-space-3) var(--g-space-1) var(--g-space-2);
+  border: 0;
+  border-radius: var(--g-radius-md);
+  background: transparent;
+  color: var(--g-text-muted);
+}
+
+.preset:hover {
+  background: var(--g-bg-control);
+  color: var(--g-text-strong);
+}
+
+.preset[data-active] {
+  background: var(--g-accent-soft);
+  color: var(--g-text-strong);
+}
+
+.swatch {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 0 0 1px rgb(255 255 255 / 0.12),
+    0 4px 10px rgb(0 0 0 / 0.4);
+}
+
+.preset[data-active] .swatch {
+  box-shadow:
+    0 0 0 2px var(--g-accent),
+    0 4px 10px rgb(0 0 0 / 0.4);
+}
+
+.presetName {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: var(--g-text-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.params {
+  display: flex;
+  flex-direction: column;
+  gap: var(--g-space-2);
+}

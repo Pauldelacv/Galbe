@@ -1,0 +1,71 @@
+.slider {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--g-space-4);
+  height: var(--g-control-height);
+  padding: 0 var(--g-space-4);
+  border-radius: var(--g-radius-sm);
+  background: var(--g-bg-control);
+  cursor: ew-resize;
+  overflow: hidden;
+  touch-action: none;
+  transition: background var(--g-duration-fast) var(--g-ease);
+}
+
+.slider:hover {
+  background: var(--g-bg-control-hover);
+}
+
+.slider[data-disabled] {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.slider[data-editing] {
+  cursor: text;
+  box-shadow: var(--g-focus-ring);
+}
+
+.fill {
+  position: absolute;
+  inset: 0;
+  transform-origin: left;
+  background: var(--g-bg-control-active);
+  pointer-events: none;
+}
+
+.label,
+.value {
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.label {
+  color: var(--g-text-muted);
+}
+
+.value {
+  font-variant-numeric: tabular-nums;
+  color: var(--g-text-strong);
+}
+
+.unit {
+  margin-left: 1px;
+  color: var(--g-text-muted);
+}
+
+.input {
+  position: relative;
+  width: 50%;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--g-text-strong);
+}

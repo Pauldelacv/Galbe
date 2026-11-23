@@ -1,0 +1,40 @@
+.textarea {
+  width: 100%;
+  min-height: 52px;
+  padding: var(--g-space-3) var(--g-space-4);
+  border: 0;
+  border-radius: var(--g-radius-sm);
+  background: var(--g-bg-control);
+  resize: vertical;
+  outline: none;
+  line-height: 1.4;
+  color: var(--g-text-strong);
+}
+
+.textarea:focus-visible {
+  box-shadow: var(--g-focus-ring);
+}
+
+.fontButton {
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 0 var(--g-space-4);
+}
+
+.fontName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--g-space-4);
+  min-height: var(--g-control-height);
+  margin-top: var(--g-space-2);
+}
+
+.toggleRow > :last-child:not(:first-child) {
+  width: 120px;
+}

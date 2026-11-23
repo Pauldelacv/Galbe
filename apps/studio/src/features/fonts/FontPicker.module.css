@@ -1,0 +1,136 @@
+.search {
+  height: 30px;
+  padding: 0 var(--g-space-4);
+  border: 0;
+  border-radius: var(--g-radius-sm);
+  background: var(--g-bg-control);
+  outline: none;
+}
+
+.search:focus-visible {
+  box-shadow: var(--g-focus-ring);
+}
+
+.filters {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-5);
+}
+
+.filters > :first-child {
+  flex: 1;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  height: 380px;
+  overflow-y: auto;
+  margin: 0 calc(var(--g-space-3) * -1);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-4);
+  padding: var(--g-space-2) var(--g-space-3);
+  border-radius: var(--g-radius-md);
+}
+
+.row:hover {
+  background: var(--g-bg-control);
+}
+
+.row[data-active] {
+  background: var(--g-accent-soft);
+}
+
+.rowMain {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  min-width: 0;
+  padding: var(--g-space-2) 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.preview {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: 24px;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--g-text-strong);
+  transition: opacity var(--g-duration) var(--g-ease);
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--g-space-3);
+  color: var(--g-text-muted);
+  font-size: var(--g-text-sm);
+  text-transform: capitalize;
+}
+
+.faces {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--g-space-1);
+  max-width: 200px;
+}
+
+.face {
+  height: 20px;
+  padding: 0 var(--g-space-3);
+  border: 0;
+  border-radius: 3px;
+  background: var(--g-bg-control-hover);
+  color: var(--g-text-muted);
+  font-size: var(--g-text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.face:hover:not(:disabled) {
+  color: var(--g-text-strong);
+}
+
+.face[data-active] {
+  background: var(--g-accent);
+  color: var(--g-accent-contrast);
+}
+
+.empty,
+.more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--g-space-4);
+  padding: var(--g-space-7);
+  color: var(--g-text-muted);
+}
+
+.note {
+  margin: 0;
+  color: var(--g-text-faint);
+  font-size: var(--g-text-xs);
+  line-height: 1.5;
+}
+
+.spin {
+  width: 14px;
+  height: 14px;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

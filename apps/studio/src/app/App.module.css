@@ -1,0 +1,37 @@
+.app {
+  display: grid;
+  grid-template-rows: var(--g-topbar-height) minmax(0, 1fr);
+  height: 100%;
+}
+
+.main {
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 0;
+}
+
+.main > :only-child,
+.main > :nth-child(1):nth-last-child(2) {
+  grid-column: span 1;
+}
+
+.drop {
+  position: fixed;
+  inset: 0;
+  z-index: var(--g-z-dialog);
+  display: grid;
+  place-items: center;
+  padding: var(--g-space-8);
+  background: rgb(8 8 10 / 0.72);
+  pointer-events: none;
+}
+
+.drop > div {
+  padding: var(--g-space-7) var(--g-space-8);
+  border: 1.5px dashed var(--g-accent);
+  border-radius: var(--g-radius-lg);
+  background: var(--g-bg-raised);
+  color: var(--g-text);
+  font-size: var(--g-text-lg);
+}

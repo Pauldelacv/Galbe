@@ -1,0 +1,100 @@
+/*
+ * Galbe design tokens — the only place raw visual values live.
+ * Components use these variables (via CSS Modules), so re-skinning the studio means
+ * editing this file only.
+ */
+:root {
+  /* Neutral scale (cool grey) */
+  --g-gray-0: #0c0c0e;
+  --g-gray-1: #121215;
+  --g-gray-2: #17171b;
+  --g-gray-3: #1d1d22;
+  --g-gray-4: #24242a;
+  --g-gray-5: #2d2d34;
+  --g-gray-6: #3a3a43;
+  --g-gray-7: #52525d;
+  --g-gray-8: #7c7c88;
+  --g-gray-9: #a9a9b4;
+  --g-gray-10: #d6d6dd;
+  --g-gray-11: #f2f2f5;
+
+  /* Accent: a restrained electric blue */
+  --g-accent: #4d7cff;
+  --g-accent-hover: #6b92ff;
+  --g-accent-soft: rgb(77 124 255 / 0.16);
+  --g-accent-contrast: #ffffff;
+
+  --g-danger: #ff5a52;
+  --g-warning: #f5b740;
+  --g-success: #3ccf8e;
+
+  /* Semantic colours */
+  --g-bg-app: var(--g-gray-0);
+  --g-bg-panel: var(--g-gray-1);
+  --g-bg-raised: var(--g-gray-2);
+  --g-bg-control: var(--g-gray-3);
+  --g-bg-control-hover: var(--g-gray-4);
+  --g-bg-control-active: var(--g-gray-5);
+  --g-bg-viewport: #08080a;
+  --g-border: var(--g-gray-3);
+  --g-border-strong: var(--g-gray-5);
+  --g-text: var(--g-gray-10);
+  --g-text-strong: var(--g-gray-11);
+  --g-text-muted: var(--g-gray-8);
+  --g-text-faint: var(--g-gray-7);
+  --g-focus-ring: 0 0 0 2px var(--g-accent);
+  --g-checker-a: #1b1b20;
+  --g-checker-b: #141418;
+
+  /* Typography */
+  --g-font-ui: "Inter var", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --g-font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --g-text-xs: 10.5px;
+  --g-text-sm: 11.5px;
+  --g-text-md: 12.5px;
+  --g-text-lg: 14px;
+  --g-weight-regular: 450;
+  --g-weight-medium: 550;
+  --g-weight-bold: 650;
+  --g-tracking-caps: 0.06em;
+
+  /* Spacing (4 px grid) */
+  --g-space-1: 2px;
+  --g-space-2: 4px;
+  --g-space-3: 6px;
+  --g-space-4: 8px;
+  --g-space-5: 12px;
+  --g-space-6: 16px;
+  --g-space-7: 24px;
+  --g-space-8: 32px;
+
+  /* Sizes */
+  --g-control-height: 26px;
+  --g-control-height-sm: 22px;
+  --g-topbar-height: 44px;
+  --g-panel-left-width: 232px;
+  --g-panel-right-width: 292px;
+  --g-icon-sm: 14px;
+  --g-icon-md: 16px;
+
+  /* Radii */
+  --g-radius-sm: 4px;
+  --g-radius-md: 6px;
+  --g-radius-lg: 10px;
+  --g-radius-pill: 999px;
+
+  /* Elevation */
+  --g-shadow-popover: 0 12px 32px rgb(0 0 0 / 0.5), 0 0 0 1px var(--g-gray-4);
+  --g-shadow-frame: 0 0 0 1px rgb(255 255 255 / 0.06), 0 20px 60px rgb(0 0 0 / 0.55);
+
+  /* Motion */
+  --g-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --g-duration-fast: 90ms;
+  --g-duration: 160ms;
+
+  /* Layers */
+  --g-z-overlay: 10;
+  --g-z-popover: 100;
+  --g-z-dialog: 200;
+  --g-z-toast: 300;
+}

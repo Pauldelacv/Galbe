@@ -1,0 +1,33 @@
+.summary {
+  padding: var(--g-space-4);
+  border-radius: var(--g-radius-sm);
+  background: var(--g-bg-control);
+  color: var(--g-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.summary strong {
+  color: var(--g-text-strong);
+  font-weight: var(--g-weight-bold);
+}
+
+.clamped {
+  color: var(--g-warning);
+}
+
+.hint {
+  margin: 0;
+  color: var(--g-text-faint);
+  font-size: var(--g-text-sm);
+  line-height: 1.5;
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
