@@ -1,0 +1,37 @@
+name: Bug report
+description: Something does not work as expected.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: A clear description of the problem. Screenshots or a screen recording help a lot.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Add text
+        2. Turn on Bend
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and OS
+      placeholder: Chrome 142 on macOS 16, Apple M3
+    validations:
+      required: true
+  - type: textarea
+    id: file
+    attributes:
+      label: Project file
+      description: If you can, attach the `.galbe` file (Save as .galbe) that shows the problem. Remove anything confidential first.

@@ -1,0 +1,35 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to make?
+      description: Describe the visual or the workflow, not only the feature. References and sketches are welcome (no copyrighted templates from other tools, please).
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would help?
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        [
+          Type,
+          Shape,
+          Object,
+          Cover,
+          Materials,
+          Lighting,
+          Effects,
+          Animation,
+          Export,
+          Embed,
+          AI,
+          UI / shortcuts,
+          Other,
+        ]
