@@ -63,7 +63,13 @@ Galbe (`packages/core/src/presets`) and are covered by the project's MIT licence
 
 ## Third-party libraries
 
-Runtime libraries (three.js, React, React Three Fiber, drei, postprocessing, Zustand,
-Zod, opentype.js, fflate, idb, lucide icons…) are installed from npm under their own
-permissive licences (MIT, ISC, Apache-2.0); see each package's `LICENSE` in
-`node_modules` or on npm.
+Runtime libraries are installed from npm under their own permissive licences; none of
+their code is vendored into this repository. The main ones:
+
+| Library                                                                            | Licence                    |
+| ---------------------------------------------------------------------------------- | -------------------------- |
+| three.js, React, React Three Fiber, drei, Zustand, Immer, Zod, opentype.js, fflate | MIT                        |
+| idb, lucide-react                                                                  | ISC                        |
+| clipper-lib (polygon boolean operations for glyph outlines)                        | Boost Software License 1.0 |
+
+See each package's `LICENSE` in `node_modules` or on npm for the full texts.

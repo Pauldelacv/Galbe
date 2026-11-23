@@ -1,4 +1,5 @@
 import { BevelSchema, DeformSchema } from '@galbe/core';
+import { ShapeUtils } from 'three';
 import { describe, expect, it } from 'vitest';
 import { fontRefKey } from '../src/fonts/FontLibrary.ts';
 import { soupBounds, vertexCount } from '../src/geometry/soup.ts';
@@ -123,6 +124,23 @@ describe('outlines', () => {
     expect(i.every((shape) => shape.holes.length === 0)).toBe(true);
     const percent = glyphShapes(font.charToGlyph('%').path.commands, 1 / font.unitsPerEm);
     expect(percent.reduce((n, shape) => n + shape.holes.length, 0)).toBe(2);
+  });
+
+  it('merges overlapping and self-intersecting contours (non-zero fill)', async () => {
+    // Static instances of variable fonts keep overlaps: Unbounded's "L" is one
+    // self-intersecting contour, and "R" is two overlapping solids.
+    const face = await loadFace('unbounded', 900);
+    const font = face.fonts[0]!;
+    const l = glyphShapes(font.charToGlyph('L').path.commands, 1 / font.unitsPerEm);
+    expect(l).toHaveLength(1);
+    expect(l[0]!.holes).toHaveLength(0);
+    const r = glyphShapes(font.charToGlyph('R').path.commands, 1 / font.unitsPerEm);
+    expect(r).toHaveLength(1);
+    expect(r[0]!.holes).toHaveLength(1);
+    // The merged outline has no duplicate area: its signed area equals the union area.
+    const area = Math.abs(ShapeUtils.area(r[0]!.getPoints()));
+    expect(area).toBeGreaterThan(0.3);
+    expect(area).toBeLessThan(0.408 + 0.102);
   });
 });
 

@@ -15,10 +15,12 @@
   "dependencies": {
     "@galbe/assets": "workspace:*",
     "@galbe/core": "workspace:*",
+    "clipper-lib": "6.4.2",
     "opentype.js": "2.0.0",
     "three": "0.187.0"
   },
   "devDependencies": {
+    "@types/clipper-lib": "6.4.0",
     "@types/three": "0.187.0",
     "immer": "11.2.10"
   }

@@ -1,43 +1,25 @@
+import * as clipperModule from 'clipper-lib';
 import type { PathCommand } from 'opentype.js';
-import { Path, Shape, ShapeUtils, type Vector2 } from 'three';
+import { Path, Shape, Vector2 } from 'three';
 
-interface Contour {
-  path: Path;
-  points: Vector2[];
-  area: number;
-}
+// clipper-lib is CommonJS (`module.exports = ClipperLib`): depending on the bundler the
+// namespace holds the API directly or under `default`.
+const ClipperLib = ((clipperModule as unknown as { default?: typeof clipperModule }).default ??
+  clipperModule) as typeof clipperModule;
 
-function pointInPolygon(x: number, y: number, polygon: Vector2[]): boolean {
-  let inside = false;
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    const a = polygon[i]!;
-    const b = polygon[j]!;
-    if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
-  }
-  return inside;
-}
+/** Integer grid used for the boolean union (font units × 16). */
+const GRID = 16;
 
-/** Converts font-unit, y-up path commands to contours scaled to scene units. */
-export function commandsToContours(commands: PathCommand[], scale: number): Contour[] {
-  const contours: Contour[] = [];
+/** Converts font-unit, y-up path commands to `THREE.Path` contours (one per subpath). */
+export function commandsToPaths(commands: PathCommand[], scale = 1): Path[] {
+  const paths: Path[] = [];
   let current: Path | null = null;
-  const flush = () => {
-    if (!current) return;
-    const points = current.getPoints(4);
-    // Drop the duplicated closing point for area/containment computations.
-    if (points.length > 1 && points[0]!.equals(points.at(-1)!)) points.pop();
-    if (points.length >= 3) {
-      const area = ShapeUtils.area(points);
-      if (Math.abs(area) > 1e-12) contours.push({ path: current, points, area });
-    }
-    current = null;
-  };
   for (const command of commands) {
     switch (command.type) {
       case 'M':
-        flush();
         current = new Path();
         current.moveTo(command.x * scale, command.y * scale);
+        paths.push(current);
         break;
       case 'L':
         current?.lineTo(command.x * scale, command.y * scale);
@@ -61,50 +43,57 @@ export function commandsToContours(commands: PathCommand[], scale: number): Cont
         );
         break;
       case 'Z':
-        flush();
+        current = null;
         break;
     }
   }
-  flush();
-  return contours;
+  return paths;
 }
 
 /**
- * Groups contours into shapes with holes. Solids are the contours whose winding matches
- * the glyph's largest contour (TrueType and CFF use opposite conventions, so we never
- * assume one). Each hole is attached to the smallest solid that contains it.
+ * Turns a glyph outline into extrudable shapes with holes.
+ *
+ * Fonts may contain overlapping or self-intersecting contours (common in static instances
+ * of variable fonts), which must be filled with the non-zero winding rule. Contours are
+ * flattened (`curveSegments` points per curve) and merged with a boolean union (Clipper,
+ * non-zero fill), which also resolves holes and islands, for TrueType and CFF alike.
  */
-export function contoursToShapes(contours: Contour[]): Shape[] {
-  if (!contours.length) return [];
-  const largest = contours.reduce((a, b) => (Math.abs(b.area) > Math.abs(a.area) ? b : a));
-  const solidSign = Math.sign(largest.area);
-  const solids = contours.filter((contour) => Math.sign(contour.area) === solidSign);
-  const holes = contours.filter((contour) => Math.sign(contour.area) !== solidSign);
+export function glyphShapes(commands: PathCommand[], scale: number, curveSegments = 8): Shape[] {
+  const subject = commandsToPaths(commands)
+    .map((path) => {
+      const points = path.getPoints(curveSegments);
+      if (points.length > 1 && points[0]!.equals(points.at(-1)!)) points.pop();
+      return points.map((point) => ({
+        X: Math.round(point.x * GRID),
+        Y: Math.round(point.y * GRID),
+      }));
+    })
+    .filter((points) => points.length >= 3);
+  if (!subject.length) return [];
 
-  const shapes = new Map<Contour, Shape>();
-  for (const solid of solids) {
-    const shape = new Shape();
-    shape.curves = solid.path.curves;
-    shape.currentPoint.copy(solid.path.currentPoint);
-    shapes.set(solid, shape);
-  }
-  for (const hole of holes) {
-    const probe = hole.points[0]!;
-    const parent = solids
-      .filter((solid) => pointInPolygon(probe.x, probe.y, solid.points))
-      .sort((a, b) => Math.abs(a.area) - Math.abs(b.area))[0];
-    if (parent) {
-      shapes.get(parent)!.holes.push(hole.path);
-    } else {
-      // A hole outside every solid means inconsistent winding: render it as a solid.
-      const shape = new Shape();
-      shape.curves = hole.path.curves;
-      shapes.set(hole, shape);
+  const clipper = new ClipperLib.Clipper();
+  clipper.AddPaths(subject, ClipperLib.PolyType.ptSubject, true);
+  const tree = new ClipperLib.PolyTree();
+  clipper.Execute(
+    ClipperLib.ClipType.ctUnion,
+    tree,
+    ClipperLib.PolyFillType.pftNonZero,
+    ClipperLib.PolyFillType.pftNonZero,
+  );
+
+  const factor = scale / GRID;
+  const toVectors = (contour: { X: number; Y: number }[]) =>
+    contour.map((p) => new Vector2(p.X * factor, p.Y * factor));
+  const shapes: Shape[] = [];
+  const visit = (node: ReturnType<typeof tree.Childs>[number]) => {
+    // Outer contour: a shape whose children are its holes; holes' children are islands.
+    const shape = new Shape(toVectors(node.Contour()));
+    for (const hole of node.Childs()) {
+      shape.holes.push(new Path(toVectors(hole.Contour())));
+      for (const island of hole.Childs()) visit(island);
     }
-  }
-  return [...shapes.values()];
-}
-
-export function glyphShapes(commands: PathCommand[], scale: number): Shape[] {
-  return contoursToShapes(commandsToContours(commands, scale));
+    shapes.push(shape);
+  };
+  for (const node of tree.Childs()) visit(node);
+  return shapes;
 }

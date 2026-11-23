@@ -281,6 +281,9 @@ importers:
       '@galbe/core':
         specifier: workspace:*
         version: link:../core
+      clipper-lib:
+        specifier: 6.4.2
+        version: 6.4.2
       opentype.js:
         specifier: 2.0.0
         version: 2.0.0
@@ -288,6 +291,9 @@ importers:
         specifier: 0.187.0
         version: 0.187.0
     devDependencies:
+      '@types/clipper-lib':
+        specifier: 6.4.0
+        version: 6.4.0
       '@types/three':
         specifier: 0.187.0
         version: 0.187.0
@@ -577,6 +583,9 @@ packages:
   '@types/chai@5.2.3':
     resolution: {integrity: sha512-Mw558oeA9fFbv65/y4mHtXDs9bPnFMZAL/jxdPFUpOHHIXX91mcgEHbS5Lahr+pwZFR8A7GQleRWeI6cGFC2UA==}
 
+  '@types/clipper-lib@6.4.0':
+    resolution: {integrity: sha512-y8WVQWLCIJobtcxk8SJj1f7OGVbQEL7RmfGtrWDkAKFxq2U6F0/7/hLYvDWlUnBayvnRYkq+QVZaUzm13mu+Ng==}
+
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
@@ -794,6 +803,9 @@ packages:
   chai@6.3.0:
     resolution: {integrity: sha512-XWAtwJ6OHO+tj0EKCs0Y2UamnyOxseZWltU4x2U2wh8g4AigdjwvtUjvLP2tqkA/avxHEtzxNaqGq/YGNwckKg==}
     engines: {node: '>=18'}
+
+  clipper-lib@6.4.2:
+    resolution: {integrity: sha512-knglhjQX5ihNj/XCIs6zCHrTemdvHY3LPZP9XB2nq2/3igyYMFueFXtfp84baJvEE+f8pO1ZS4UVeEgmLnAprQ==}
 
   cross-env@7.0.3:
     resolution: {integrity: sha512-+/HKd6EgcQCJGh2PSjZuUitQBQynKor4wrFbRg4DtAgS1aWO+gU52xpH7M9ScGgXSYmAVS9bIJ8EzuaGw0oNAw==}
@@ -1492,6 +1504,8 @@ snapshots:
       '@types/deep-eql': 4.0.2
       assertion-error: 2.0.1
 
+  '@types/clipper-lib@6.4.0': {}
+
   '@types/deep-eql@4.0.2': {}
 
   '@types/draco3d@1.4.10': {}
@@ -1630,6 +1644,8 @@ snapshots:
       three: 0.187.0
 
   chai@6.3.0: {}
+
+  clipper-lib@6.4.2: {}
 
   cross-env@7.0.3:
     dependencies:

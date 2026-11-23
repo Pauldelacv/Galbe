@@ -31,7 +31,11 @@ export const extrudeKey = (p: ExtrudeParams): string =>
  * creased normals so curves and bevels look smooth while corners stay crisp.
  */
 export function extrudeGlyph(font: Font, glyph: Glyph, params: ExtrudeParams): TriangleSoup | null {
-  const shapes = glyphShapes(glyph.path.commands, params.size / font.unitsPerEm);
+  const shapes = glyphShapes(
+    glyph.path.commands,
+    params.size / font.unitsPerEm,
+    params.curveSegments,
+  );
   if (!shapes.length) return null;
 
   const bevel = params.bevel.enabled && (params.bevel.size > 0 || params.bevel.thickness > 0);
