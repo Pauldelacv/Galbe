@@ -28,7 +28,7 @@ This code applies in all project spaces, and when someone represents the project
 ## Enforcement
 
 Report problems privately to the maintainers by opening a
-[security advisory](https://github.com/pauldelacv/galbe/security/advisories/new)
+[security advisory](https://github.com/Pauldelacv/Galbe/security/advisories/new)
 marked "Code of Conduct" (it is only visible to maintainers). Reports are handled
 confidentially and promptly. Maintainers may warn, temporarily ban or permanently ban
 anyone whose behaviour breaks these rules, in proportion to the harm caused.
