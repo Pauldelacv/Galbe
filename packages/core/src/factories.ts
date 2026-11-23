@@ -71,6 +71,9 @@ export function createStarterDocument(name = 'Untitled'): GalbeDocument {
   const text = createTextNode({ name: 'Galbe', text: 'Galbe', materialId: material.id });
   return createDocument({
     name,
+    // Puts the soft boxes of the default studio HDRI in front of the text, so chrome
+    // reads as a bright gradient instead of reflecting the dark back of the studio.
+    environment: { hdri: 'builtin:hdri/studio-small-09', intensity: 1, rotation: 120 },
     materials: { [material.id]: material },
     nodes: [text],
   });

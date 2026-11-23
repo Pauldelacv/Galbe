@@ -1,3 +1,4 @@
+/// <reference path="../types/opentype.d.ts" />
 import type { AssetUri, FontRef } from '@galbe/core';
 import { type Font, parse } from 'opentype.js';
 import type { AssetSource } from '../assets/AssetSource.ts';

@@ -74,10 +74,15 @@ export class SceneController {
     this.content.name = 'GalbeContent';
   }
 
-  attach(scene: Scene): void {
+  /**
+   * Adds the controller's objects to a scene. Hosts that mount `content` themselves (e.g.
+   * React Three Fiber's `<primitive>`, to get pointer events) pass `{ content: false }`.
+   */
+  attach(scene: Scene, { content = true }: { content?: boolean } = {}): void {
     this.scene = scene;
-    scene.add(this.content, this.contactShadows.object, this.lights.object);
-    if (this.doc) this.sync(this.doc);
+    if (content) scene.add(this.content);
+    scene.add(this.contactShadows.object, this.lights.object);
+    if (this.doc) this.resync();
   }
 
   detach(): void {

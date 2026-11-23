@@ -33,7 +33,9 @@ declare module 'opentype.js' {
     unitsPerEm: number;
     ascender: number;
     descender: number;
-    names: Record<string, Record<string, string> | undefined>;
+    names: Record<string, Record<string, Record<string, string> | undefined> | undefined>;
+    /** English value of a name-table entry (`fontFamily`, `preferredFamily`, …). */
+    getEnglishName(name: string): string | undefined;
     tables: Record<string, Record<string, unknown> | undefined>;
     position: Position;
     hasChar(char: string): boolean;
