@@ -1,0 +1,25 @@
+{
+  "name": "@galbe/engine",
+  "version": "0.1.0",
+  "description": "Galbe's framework-free three.js runtime: turns a Galbe document into a renderable scene.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@galbe/assets": "workspace:*",
+    "@galbe/core": "workspace:*",
+    "opentype.js": "2.0.0",
+    "three": "0.187.0"
+  },
+  "devDependencies": {
+    "@types/three": "0.187.0",
+    "immer": "11.2.10"
+  }
+}

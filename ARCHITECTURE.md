@@ -262,9 +262,13 @@ thumbnail.png         optional, for file browsers and the project list
 2. **Layout** — lines are split on `\n`; glyphs advance by their advance width, plus
    kerning and `letterSpacing × size`; lines are spaced by `lineHeight × size` and
    aligned left/centre/right. The block is centred on its bounding box.
-3. **Glyph outlines → shapes** — opentype path commands become `THREE.ShapePath`
-   contours. Outer contours vs holes are decided by **nesting depth** (point-in-polygon),
-   not by winding, which works for both TrueType and CFF outlines.
+3. **Glyph outlines → shapes** — opentype path commands become `THREE.Path` contours.
+   Solids are the contours whose winding matches the glyph's largest contour (TrueType
+   and CFF use opposite conventions, so none is assumed); each hole is attached to the
+   smallest solid containing it. Kerning comes from a small built-in GPOS reader
+   (PairPos formats 1–2, including Extension lookups that opentype.js skips), with
+   opentype.js as fallback; ligatures use opentype.js shaping when the font's GSUB is
+   supported.
 4. **Extrusion** — `ExtrudeGeometry` per glyph with `bevelOffset = -bevelSize` so the
    silhouette stays true to the typeface while the bevel rounds the edges. Results are
    cached per `(font, glyph, size, depth, bevel, curveSegments)`; repeated letters reuse
