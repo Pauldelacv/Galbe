@@ -1,0 +1,19 @@
+{
+  "name": "@galbe/core",
+  "version": "0.1.0",
+  "description": "Galbe scene document: versioned schema, migrations, operations, presets and the .galbe file format.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "fflate": "0.8.3",
+    "zod": "4.6.7"
+  }
+}

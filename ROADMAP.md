@@ -13,11 +13,11 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ⬜ `@galbe/core`: versioned Zod scene schema, migrations, ops, presets, `.galbe` zip format
 - ⬜ `@galbe/assets`: bundled OFL fonts and CC0 HDRIs with a typed manifest
 - ⬜ `@galbe/engine`: SceneController, font library, text geometry, deformers,
-      materials, HDRI environment, contact shadows
+  materials, HDRI environment, contact shadows
 - ⬜ Studio shell: viewport / tools + layers / inspector, collapsible panels, design tokens
 - ⬜ Type tool: any font (bundled, Google Fonts catalogue, .ttf/.otf/.woff import),
-      extrusion, bevel (size, thickness, segments), letter spacing, line height,
-      multi-line, alignment, bend / twist / wave
+  extrusion, bevel (size, thickness, segments), letter spacing, line height,
+  multi-line, alignment, bend / twist / wave
 - ⬜ 6+ material presets (chrome, glass, gold, plastic, ceramic, iridescent…) with basic tweaks
 - ⬜ HDRI lighting: presets + import, rotation, intensity, background blur; contact shadows
 - ⬜ Frame formats (1:1, 4:5, 9:16, 16:9, A4, custom), transparent/colour/HDRI background
@@ -33,10 +33,10 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ⬜ Parametric primitives: sphere, torus, rounded box, capsule, ring, noise blob
 - ⬜ Object tool: GLB/GLTF/FBX/OBJ import, scale & pivot normalisation, material override
 - ⬜ Full material editor, custom material library (saved locally), PBR textures (ambientCG),
-      matcaps, video textures, holographic shader
+  matcaps, video textures, holographic shader
 - ⬜ Additional lights (directional, point, spot) UI, reflective ground
 - ⬜ Post-processing stack (reorderable): bloom, DOF, chromatic aberration, grain, vignette,
-      halftone, dithering, pixel, ASCII, glitch, LUT; extensible GLSL effect registry
+  halftone, dithering, pixel, ASCII, glitch, LUT; extensible GLSL effect registry
 - ⬜ Undo/redo UI (history engine lands in v0.1), history panel
 - ⬜ On-demand high-resolution HDRIs (2K/4K) for large exports
 
@@ -46,9 +46,9 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ⬜ Timeline: keyframes on any numeric/colour property, easing curves, duration, seamless loops
 - ⬜ Animated camera: orbit, truck, dolly
 - ⬜ Video export: deterministic frame stepping, MP4 H.264 (WebCodecs + Mediabunny),
-      WebM VP9 with alpha, PNG sequence fallback
+  WebM VP9 with alpha, PNG sequence fallback
 - ⬜ Cover tool: gradient (linear, radial, mesh), image and video backgrounds, 2D text
-      overlays, safe zones and grid
+  overlays, safe zones and grid
 
 ## v0.4 — 3D export, embeds & templates ⬜
 
@@ -56,7 +56,7 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ⬜ `@galbe/player`: `<galbe-scene src="…">` web component (orbit, mouse follow, scroll)
 - ⬜ Embed export: HTML snippet
 - ⬜ 12 original templates shipped as `.galbe` files (chrome logo, glass type, 9:16 key visual,
-      3D sticker…)
+  3D sticker…)
 
 ## v0.5 — AI module (optional, off by default) ⬜
 

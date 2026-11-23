@@ -4,7 +4,7 @@ This document describes how Galbe is put together: the scene document that is th
 single source of truth, the rendering pipeline that derives pixels from it, and the
 layout of the repository. It is meant to be read before contributing code.
 
-> **Clean-room rule.** Galbe re-implements a *category* of features (3D type, extruded
+> **Clean-room rule.** Galbe re-implements a _category_ of features (3D type, extruded
 > logos, objects, social key visuals, motion, embeds). It does not copy code, assets,
 > templates, presets, copy, names, logos or UI from any existing product. Every bundled
 > asset is CC0 or under a compatible free licence and is listed in [ASSETS.md](./ASSETS.md).
@@ -15,7 +15,7 @@ layout of the repository. It is meant to be read before contributing code.
 
 1. **The document is the truth.** Everything the user makes is a plain, versioned,
    JSON-serialisable `GalbeDocument` validated by Zod (`@galbe/core`). The 3D scene,
-   the UI, exports and the embed player are all *derived* from it. Nothing that matters
+   the UI, exports and the embed player are all _derived_ from it. Nothing that matters
    lives only in a three.js object or a React component.
 2. **One renderer, many hosts.** The code that turns a document into three.js objects
    lives in a framework-free package (`@galbe/engine`). The studio (React Three Fiber),
@@ -90,15 +90,15 @@ library build in v0.4.
 
 ### Tooling
 
-| Concern        | Choice                                   | Why |
-| -------------- | ---------------------------------------- | --- |
-| Package manager| pnpm workspaces                          | Fast, strict, good monorepo support |
-| Language       | TypeScript 7 (native compiler), `strict` + `noUncheckedIndexedAccess` | Latest stable, very fast typecheck |
-| Lint + format  | Biome                                    | One fast tool; no dependency on the TS JS API (TS 7 has none) |
-| Unit tests     | Vitest (projects per package)            | Native ESM/TS, same transform as Vite |
-| E2E            | Playwright (Chromium, SwiftShader WebGL) | Smoke test of the real studio |
-| Bundler        | Vite                                     | Dev server + static build |
-| CI / hosting   | GitHub Actions, Cloudflare Pages         | Static deploy, no server |
+| Concern         | Choice                                                                | Why                                                           |
+| --------------- | --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Package manager | pnpm workspaces                                                       | Fast, strict, good monorepo support                           |
+| Language        | TypeScript 7 (native compiler), `strict` + `noUncheckedIndexedAccess` | Latest stable, very fast typecheck                            |
+| Lint + format   | Biome                                                                 | One fast tool; no dependency on the TS JS API (TS 7 has none) |
+| Unit tests      | Vitest (projects per package)                                         | Native ESM/TS, same transform as Vite                         |
+| E2E             | Playwright (Chromium, SwiftShader WebGL)                              | Smoke test of the real studio                                 |
+| Bundler         | Vite                                                                  | Dev server + static build                                     |
+| CI / hosting    | GitHub Actions, Cloudflare Pages                                      | Static deploy, no server                                      |
 
 ---
 
@@ -181,10 +181,10 @@ documents never depend on preset definitions that might change later.
 
 Binary content is referenced, never inlined, through an **asset URI**:
 
-| URI                         | Resolves to |
-| --------------------------- | ----------- |
-| `builtin:fonts/inter-700`   | A file shipped with the app (`@galbe/assets`), served under `/builtin/`. Builtin ids are **stable forever** (we only ever add). |
-| `asset:<sha256-128>`        | A file stored with the project: IndexedDB `assets` store in the studio, `assets/<id>.<ext>` in a `.galbe` zip. |
+| URI                       | Resolves to                                                                                                                     |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `builtin:fonts/inter-700` | A file shipped with the app (`@galbe/assets`), served under `/builtin/`. Builtin ids are **stable forever** (we only ever add). |
+| `asset:<sha256-128>`      | A file stored with the project: IndexedDB `assets` store in the studio, `assets/<id>.<ext>` in a `.galbe` zip.                  |
 
 Project asset ids are the first 128 bits of the SHA-256 of the content, so identical
 files are deduplicated across projects. `doc.assets[id]` stores metadata only
@@ -194,13 +194,13 @@ assets, so a saved project renders offline and on any machine.
 
 ### 3.3 Versioning and migrations
 
-* `schemaVersion` is an integer. **Additive** changes (new optional fields with
-  defaults, new node/material/effect types) do *not* bump it: Zod defaults fill
+- `schemaVersion` is an integer. **Additive** changes (new optional fields with
+  defaults, new node/material/effect types) do _not_ bump it: Zod defaults fill
   missing fields when an older document is parsed.
-* **Breaking** changes bump it and register a migration
+- **Breaking** changes bump it and register a migration
   `migrations[n]: (raw: unknown) => unknown` that upgrades version `n` to `n + 1`.
-* `loadDocument(raw)` reads the version, applies migrations in order, then validates
-  with the current schema. Documents from a *newer* Galbe are rejected with a clear
+- `loadDocument(raw)` reads the version, applies migrations in order, then validates
+  with the current schema. Documents from a _newer_ Galbe are rejected with a clear
   error instead of being silently truncated.
 
 ### 3.4 Operations
@@ -244,13 +244,13 @@ thumbnail.png         optional, for file browsers and the project list
                                    4. output      (tone mapping + sRGB)
 ```
 
-* **SceneController** owns a `THREE.Group`. On `sync(doc)` it creates, updates or
-  disposes one object per node. Each builder computes a *build key* from the
+- **SceneController** owns a `THREE.Group`. On `sync(doc)` it creates, updates or
+  disposes one object per node. Each builder computes a _build key_ from the
   parameters that affect geometry (text, font, size, depth, bevel, deform…). If the key
   is unchanged, only cheap properties (transform, visibility, material) are touched.
   Rebuilds are synchronous for v0.1; moving geometry builds to a Web Worker is planned
   once Shape/Object nodes land.
-* **Hosts** decide *when* to render. The studio uses R3F with `frameloop="demand"`
+- **Hosts** decide _when_ to render. The studio uses R3F with `frameloop="demand"`
   and mounts the controller's group with `<primitive>`; the player (v0.4) runs its own
   minimal loop; exporters render on demand.
 
@@ -279,15 +279,15 @@ thumbnail.png         optional, for file browsers and the project list
 
 ### 4.3 Materials, light and colour
 
-* Linear workflow, sRGB output; tone mapping selectable (default **Khronos PBR
+- Linear workflow, sRGB output; tone mapping selectable (default **Khronos PBR
   Neutral**, which keeps brand colours faithful; AgX and ACES for a filmic look).
-* `MaterialLibrary` keeps one `MeshPhysicalMaterial` per document material and patches
+- `MaterialLibrary` keeps one `MeshPhysicalMaterial` per document material and patches
   properties in place; three.js recompiles only when a feature toggles (e.g.
   transmission on/off).
-* **Environment**: equirectangular HDRIs (Poly Haven, CC0) → `PMREMGenerator`;
+- **Environment**: equirectangular HDRIs (Poly Haven, CC0) → `PMREMGenerator`;
   `scene.environmentRotation`, `environmentIntensity`, `backgroundBlurriness` give
   rotation, intensity and background blur without re-filtering.
-* **Contact shadows**: an orthographic depth pass from below the objects, blurred in
+- **Contact shadows**: an orthographic depth pass from below the objects, blurred in
   two separable passes, displayed on a ground plane. The texture is view-independent,
   so it does not need re-rendering for export tiles.
 
@@ -314,60 +314,60 @@ is identical regardless of machine speed.
 
 ### 5.1 State
 
-* **`useDocumentStore`** (Zustand + Immer): `doc`, `history { past, future }`, actions.
+- **`useDocumentStore`** (Zustand + Immer): `doc`, `history { past, future }`, actions.
   - `update(recipe, { label, coalesce?, history? })` runs a recipe in `produce`.
   - **Transactions**: `begin()` / `end()` wrap a slider drag or gizmo drag so it yields a
     single undo step while the viewport updates live.
   - History stores document snapshots (cheap thanks to structural sharing). Camera
     moves are excluded from history: restoring a snapshot keeps the current camera.
-* **`useUiStore`**: selection, active tool, panel visibility, dialogs, `interacting`
+- **`useUiStore`**: selection, active tool, panel visibility, dialogs, `interacting`
   flag (drives adaptive quality), viewport overlays (grid, safe zones).
-* Components subscribe with selectors; the viewport bridge subscribes imperatively
+- Components subscribe with selectors; the viewport bridge subscribes imperatively
   and calls `controller.sync(doc)` without re-rendering React.
 
 ### 5.2 Viewport
 
-* R3F `<Canvas frameloop="demand">`, sized to the **frame aspect** and fitted in the
+- R3F `<Canvas frameloop="demand">`, sized to the **frame aspect** and fitted in the
   viewport area like an artboard — what you see is exactly what you export.
   Transparent backgrounds show a checkerboard behind the canvas.
-* `OrbitControls` drive the document camera; drei `TransformControls` move the
+- `OrbitControls` drive the document camera; drei `TransformControls` move the
   selected node; clicks raycast into the engine group to select (`userData.nodeId`).
-* **Adaptive quality**: while orbiting, dragging a gizmo or a slider, DPR drops to 1;
+- **Adaptive quality**: while orbiting, dragging a gizmo or a slider, DPR drops to 1;
   full DPR (max 2) is restored when the interaction ends.
 
 ### 5.3 Persistence
 
-* IndexedDB database `galbe` (via `idb`): `projects` (document + thumbnail + dates) and
+- IndexedDB database `galbe` (via `idb`): `projects` (document + thumbnail + dates) and
   `assets` (content-addressed blobs shared across projects).
-* Autosave is debounced (≈ 600 ms after the last change) and flushed on
+- Autosave is debounced (≈ 600 ms after the last change) and flushed on
   `visibilitychange`/`pagehide`. The last opened project reopens on launch.
-* Import/export of `.galbe` files, and drag & drop of `.galbe`, fonts and `.hdr` files.
+- Import/export of `.galbe` files, and drag & drop of `.galbe`, fonts and `.hdr` files.
 
 ### 5.4 UI system
 
-* **Design tokens** in `src/styles/tokens.css` (colours, spacing, radii, type scale,
+- **Design tokens** in `src/styles/tokens.css` (colours, spacing, radii, type scale,
   motion, z-index) are the only place raw values live. Components use CSS Modules +
   tokens, so re-skinning the UI means editing one file.
-* Primitives in `src/ui/`: `Slider` (drag on label/track, Shift = fine ×0.1,
+- Primitives in `src/ui/`: `Slider` (drag on label/track, Shift = fine ×0.1,
   Alt = coarse ×10, double-click = reset, arrow keys, typed input with expressions),
   `ColorInput`, `Select`, `Segmented`, `Toggle`, `Section`, `Dialog`, `Tooltip`.
-* Hotkeys are declared in one registry (`lib/hotkeys.ts`) that also feeds the
+- Hotkeys are declared in one registry (`lib/hotkeys.ts`) that also feeds the
   shortcut cheat-sheet (`?`).
 
 ---
 
 ## 6. Exporters (`@galbe/exporters`)
 
-* **Image** (v0.1): `renderImage({ width, height, maxTileSize, renderTile, format })`.
+- **Image** (v0.1): `renderImage({ width, height, maxTileSize, renderTile, format })`.
   The host supplies `renderTile(tile)`, which renders the scene with
   `camera.setViewOffset(fullW, fullH, x, y, w, h)` and returns a canvas. Tiles are
   rendered with a padding margin and cropped, composed on a 2D canvas, then encoded to
   PNG/JPG/WebP (alpha preserved for PNG/WebP). The tile size respects the GPU limits
   (`MAX_TEXTURE_SIZE`, `MAX_RENDERBUFFER_SIZE`, viewport dims), so 8K works on any GPU.
-* **Video** (v0.3): deterministic frame stepping → WebCodecs `VideoEncoder` →
+- **Video** (v0.3): deterministic frame stepping → WebCodecs `VideoEncoder` →
   Mediabunny muxer (MP4 H.264; WebM VP9 with alpha where supported) → PNG sequence
   (zip) fallback.
-* **3D** (v0.4): `GLTFExporter` (GLB) and `USDZExporter` on a baked copy of the scene.
+- **3D** (v0.4): `GLTFExporter` (GLB) and `USDZExporter` on a baked copy of the scene.
 
 ---
 
@@ -388,17 +388,17 @@ sent only to the chosen provider. The studio never depends on it.
 
 ## 9. Performance budget
 
-* 60 fps on a recent MacBook for a typical scene (≤ 200k triangles, one transmissive
+- 60 fps on a recent MacBook for a typical scene (≤ 200k triangles, one transmissive
   material, contact shadows, two effects).
-* `frameloop="demand"`: no GPU work when nothing changes.
-* Glyph extrusion cache; deformation subdivision only when a deformer is active.
-* DPR drop during interaction; heavy pre-passes (contact shadows) skipped while the
+- `frameloop="demand"`: no GPU work when nothing changes.
+- Glyph extrusion cache; deformation subdivision only when a deformer is active.
+- DPR drop during interaction; heavy pre-passes (contact shadows) skipped while the
   camera alone moves.
 
 ## 10. Privacy & security
 
-* No telemetry. No account. No server.
-* Network access only for: the Google Fonts catalogue (Fontsource API/CDN, when the
+- No telemetry. No account. No server.
+- Network access only for: the Google Fonts catalogue (Fontsource API/CDN, when the
   user opens it) and, if enabled, the AI provider the user configured.
-* Imported files are parsed client-side; SVG is never injected into the DOM
+- Imported files are parsed client-side; SVG is never injected into the DOM
   (parsed with `SVGLoader`), and `.galbe` contents are validated by Zod before use.
