@@ -36,6 +36,7 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ⬜ Object tool: GLB/GLTF/FBX/OBJ import, scale & pivot normalisation, material override
 - ⬜ Full material editor, custom material library (saved locally), PBR textures (ambientCG),
   matcaps, video textures, holographic shader
+- ⬜ Add procedural node-based materials 
 - ⬜ Additional lights (directional, point, spot) UI, reflective ground
 - ⬜ Post-processing stack (reorderable): bloom, DOF, chromatic aberration, grain, vignette,
   halftone, dithering, pixel, ASCII, glitch, LUT; extensible GLSL effect registry
@@ -61,12 +62,6 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ⬜ Embed export: HTML snippet
 - ⬜ 12 original templates shipped as `.galbe` files (chrome logo, glass type, 9:16 key visual,
   3D sticker…)
-
-## v0.5 — AI module (optional, off by default) ⬜
-
-- ⬜ `AIProvider` interface, local key storage, provider settings
-- ⬜ Adapters: fal.ai, Replicate, local ComfyUI
-- ⬜ Text → PBR texture, text/image → 3D model, style variations, background generation
 
 ---
 
