@@ -1,0 +1,16 @@
+{
+  "name": "@galbe/assets",
+  "version": "0.1.0",
+  "description": "Galbe's bundled assets (OFL fonts, CC0 HDRIs) and their typed manifest.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./files/*": "./files/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p .",
+    "fetch": "node scripts/fetch-assets.mjs"
+  }
+}
