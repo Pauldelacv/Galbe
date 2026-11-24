@@ -8,6 +8,7 @@ import {
   undo,
 } from '../state/actions.ts';
 import { useDocumentStore } from '../state/documentStore.ts';
+import { groupSelection, ungroupSelection } from '../state/objectActions.ts';
 import { useUiStore } from '../state/uiStore.ts';
 
 export const isMac =
@@ -94,6 +95,22 @@ export function createHotkeys(actions: { saveFile: () => void; openFile: () => v
       description: 'Duplicate selection',
       match: (e) => mod(e) && key(e, 'd'),
       run: duplicateSelection,
+    },
+    {
+      id: 'group',
+      group: 'Edit',
+      keys: [MOD, 'G'],
+      description: 'Group selection',
+      match: (e) => mod(e) && !e.shiftKey && key(e, 'g'),
+      run: groupSelection,
+    },
+    {
+      id: 'ungroup',
+      group: 'Edit',
+      keys: [MOD, '⇧', 'G'],
+      description: 'Ungroup',
+      match: (e) => mod(e) && e.shiftKey && key(e, 'g'),
+      run: ungroupSelection,
     },
     {
       id: 'delete',
@@ -196,7 +213,7 @@ const NON_TEXT_INPUTS = new Set([
 ]);
 
 /** Text entry has priority over shortcuts; toggles and buttons do not. */
-const isEditable = (target: EventTarget | null) =>
+export const isEditable = (target: EventTarget | null) =>
   target instanceof HTMLElement &&
   (target.isContentEditable ||
     target.tagName === 'TEXTAREA' ||

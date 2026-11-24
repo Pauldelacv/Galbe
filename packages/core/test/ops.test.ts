@@ -75,6 +75,7 @@ describe('ops', () => {
     const before = text.type === 'text' ? text.materialId : '';
     const { id: _ignored, ...glass } = createMaterial('glass');
     assignMaterial(doc, text.id, glass);
-    expect(doc.materials[before]?.transmission).toBe(1);
+    const material = doc.materials[before];
+    expect(material?.type === 'physical' && material.transmission).toBe(1);
   });
 });

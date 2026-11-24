@@ -11,9 +11,9 @@ without writing code, without installing anything, without an account.
 
 </div>
 
-> **Status: v0.1 — early preview.** The Type tool, materials, lighting, local projects and
-> high-resolution image export work today. Shape, Object, effects, motion, embeds and
-> templates are on the [roadmap](./ROADMAP.md).
+> **Status: v0.2 — early preview.** Type, Shape (SVG), primitives, 3D objects, materials,
+> lighting, post-processing effects, local projects and high-resolution image export work
+> today. Motion, Cover, embeds and templates are on the [roadmap](./ROADMAP.md).
 
 ![Galbe Studio: viewport, layers and inspector](docs/media/studio.jpg)
 
@@ -27,8 +27,15 @@ without writing code, without installing anything, without an account.
 - **Real 3D typography.** Any font — 16 bundled families, the whole Google Fonts library,
   or your own `.ttf/.otf/.woff` — with kerning, ligatures, bevels and bend, twist and wave
   deformations.
+- **Logos in one paste.** Copy a logo as SVG in Figma or Illustrator and paste it into
+  Galbe: every path is extruded, with holes, strokes and one material per colour.
+- **Objects and primitives.** Drop a GLB, GLTF, FBX or OBJ, or add a sphere, torus,
+  rounded box, ring or noise blob — then restyle it with any material.
+- **A real look stack.** Bloom, depth of field, LUTs, grain, halftone, dithering, ASCII,
+  glitch… reorderable, live in the viewport and identical in exports.
 - **Physically based look.** Chrome, glass with refraction and dispersion, gold, ceramic,
-  pearl… lit by studio and outdoor HDRIs, with soft contact shadows.
+  pearl, holographic foil, matcaps, PBR texture sets… lit by studio and outdoor HDRIs (up to
+  4K) and extra lights, with soft contact shadows and a reflective floor.
 - **Print-ready output.** PNG, JPG or WebP up to 8K with a transparent background, rendered
   in tiles so it works on any graphics card.
 - **Yours, locally.** No backend: projects autosave in your browser and travel as `.galbe`
@@ -65,20 +72,27 @@ work but are not tested yet.
 2. Pick a font (**Built-in** or **Google Fonts**) and a material preset.
 3. In **Scene**, choose a format (1:1, 4:5, 9:16, 16:9, A4), a background and an HDRI.
 4. Turn on **Bend**, **Twist** or **Wave** under _Deform_.
-5. Press **Ctrl/⌘ E** to export. Press **?** for every shortcut.
+5. Paste an SVG logo (**Ctrl/⌘ V**), or add a **Primitive** or an **Object** from the left
+   panel. Select several layers and press **Ctrl/⌘ G** to group them.
+6. Open **Effects** in the inspector and add **Bloom**, **Film grain** or a **LUT**.
+7. Press **Ctrl/⌘ E** to export. Press **?** for every shortcut.
 
-Drop a `.galbe`, a font file or an `.hdr` anywhere on the window to import it.
+Drop a `.galbe`, an SVG, a 3D model, a font, an `.hdr`, images or a zipped PBR texture set,
+or a `.cube` LUT anywhere on the window to import it.
 
-## What's inside (v0.1)
+## What's inside (v0.2)
 
-|               |                                                                                                                                                                                                                                                                                               |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Type**      | Multi-line 3D text, any font, size, alignment, letter spacing, line height, extrusion, bevel (size, depth, segments), bend (arc/wrap), twist, wave                                                                                                                                            |
-| **Materials** | 12 original presets (chrome, polished gold, brushed steel, clear/frosted/tinted glass, glossy plastic, glazed ceramic, matte clay, soft rubber, pearlescent, neon) + colour, metalness, roughness, transmission, IOR, thickness, dispersion, clearcoat, iridescence, sheen, emission, opacity |
-| **Lighting**  | 7 CC0 HDRIs + `.hdr` import, intensity, rotation, background blur, contact shadows, tone mapping, exposure, focal length                                                                                                                                                                      |
-| **Formats**   | 1:1, 4:5, 9:16, 16:9, A4 @300 dpi, custom                                                                                                                                                                                                                                                     |
-| **Export**    | PNG / JPG / WebP, 1× to 8×, up to 8192 px, transparent background                                                                                                                                                                                                                             |
-| **Projects**  | IndexedDB autosave with thumbnails, project list, `.galbe` save/open, undo/redo                                                                                                                                                                                                               |
+|               |                                                                                                                                                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Type**      | Multi-line 3D text, any font, size, alignment, letter spacing, line height, extrusion, bevel (size, depth, segments), bend (arc/wrap), twist, wave                                                                       |
+| **Shape**     | SVG import or paste, holes (non-zero / even-odd), strokes, per-path materials and visibility, layer gap, extrusion, bevel, deformations                                                                                  |
+| **Objects**   | 8 parametric primitives (sphere, rounded box, torus, capsule, cylinder, cone, ring, noise blob); GLB / GLTF / FBX / OBJ import with fit size, pivot and material override                                                |
+| **Materials** | 14 original presets + every physical parameter, 8 original matcaps (+ import), holographic layer, PBR textures (colour, normal, roughness, metalness, AO, emission, opacity) with UV controls, your own material library |
+| **Effects**   | Bloom, depth of field, colour adjust, LUT (.cube + 6 looks), chromatic aberration, vignette, film grain, halftone, dithering, pixelate, ASCII, glitch — reorderable                                                      |
+| **Lighting**  | 7 CC0 HDRIs (1K bundled, 2K/4K on demand) + `.hdr` import, directional / point / spot lights, contact shadows, reflective floor, tone mapping, exposure, focal length                                                    |
+| **Formats**   | 1:1, 4:5, 9:16, 16:9, A4 @300 dpi, custom                                                                                                                                                                                |
+| **Export**    | PNG / JPG / WebP, 1× to 8×, up to 8192 px, transparent background                                                                                                                                                        |
+| **Projects**  | IndexedDB autosave with thumbnails, project list, `.galbe` save/open, undo/redo with a history panel, groups                                                                                                             |
 
 ## Project layout
 
@@ -87,7 +101,7 @@ apps/studio          Vite + React + React Three Fiber studio
 packages/core        Versioned scene schema (Zod), migrations, ops, .galbe format
 packages/engine      Framework-free three.js runtime shared by studio, exports and player
 packages/exporters   Image export (video, GLB/USDZ next)
-packages/assets      Bundled OFL fonts and CC0 HDRIs
+packages/assets      Bundled OFL fonts, CC0 HDRIs and matcaps
 ```
 
 Read [ARCHITECTURE.md](./ARCHITECTURE.md) for the scene document, the rendering pipeline
@@ -114,14 +128,13 @@ provider.
 
 Galbe runs entirely in your browser. It only contacts the network to load the studio
 itself, the Google Fonts catalogue and the font files you pick from it (via Fontsource /
-jsDelivr), and — in a later release, only if you enable it — the AI provider you configure
-with your own key.
+jsDelivr), and the 2K/4K environments you choose (from Poly Haven).
 
 ## Credits & licence
 
 Galbe is released under the [MIT licence](./LICENSE). Bundled fonts are under the SIL Open
-Font License and HDRIs are CC0 from [Poly Haven](https://polyhaven.com); every file and
-its source is listed in [ASSETS.md](./ASSETS.md).
+Font License, HDRIs are CC0 from [Poly Haven](https://polyhaven.com) and matcaps are rendered
+from them (CC0); every file and its source is listed in [ASSETS.md](./ASSETS.md).
 
 Galbe is an independent project. It re-implements a category of tools for 3D graphic
 design; it does not reuse code, assets, templates or designs from any other product.

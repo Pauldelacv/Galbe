@@ -27,3 +27,12 @@ export interface BuiltinHdri {
   license: string;
   credit: { title: string; authors: string[]; url: string };
 }
+
+export interface BuiltinMatcap {
+  /** Builtin id (without `builtin:`), e.g. `matcaps/clay-soft`. */
+  id: string;
+  name: string;
+  /** Path relative to the builtin base URL. */
+  file: string;
+  license: string;
+}

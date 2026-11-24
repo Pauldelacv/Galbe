@@ -1,6 +1,6 @@
 {
   "name": "@galbe/engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Galbe's framework-free three.js runtime: turns a Galbe document into a renderable scene.",
   "license": "MIT",
   "type": "module",
@@ -17,11 +17,13 @@
     "@galbe/core": "workspace:*",
     "clipper-lib": "6.4.2",
     "opentype.js": "2.0.0",
+    "postprocessing": "6.39.6",
     "three": "0.187.0"
   },
   "devDependencies": {
     "@types/clipper-lib": "6.4.0",
     "@types/three": "0.187.0",
+    "happy-dom": "20.0.11",
     "immer": "11.2.10"
   }
 }

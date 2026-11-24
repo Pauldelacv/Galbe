@@ -1,5 +1,5 @@
 import { createThreeTileRenderer, renderImage, scaledSize } from '@galbe/exporters';
-import { hideEditorHelpers } from '../engine/cleanRender.ts';
+import { drawWithEffects, hideEditorHelpers } from '../engine/cleanRender.ts';
 import { controller, requestRender, viewport } from '../engine/studioEngine.ts';
 import { useDocumentStore } from '../state/documentStore.ts';
 
@@ -21,7 +21,7 @@ export async function renderThumbnail(
       format,
       quality: 0.82,
       maxTileSize: 1024,
-      renderTile: createThreeTileRenderer({ renderer: gl, scene, camera }),
+      renderTile: createThreeTileRenderer({ renderer: gl, scene, camera, draw: drawWithEffects }),
     });
     return result.blob;
   } catch (error) {

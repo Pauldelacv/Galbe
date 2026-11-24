@@ -1,5 +1,55 @@
 import { z } from 'zod';
-import { ColorSchema, unit } from './common.ts';
+import { AssetUriSchema, ColorSchema, unit } from './common.ts';
+
+export const TEXTURE_SLOTS = [
+  'map',
+  'normalMap',
+  'roughnessMap',
+  'metalnessMap',
+  'aoMap',
+  'emissiveMap',
+  'alphaMap',
+] as const;
+export type TextureSlot = (typeof TEXTURE_SLOTS)[number];
+
+/** Texture slots of a physical material. Colour textures are sRGB, data textures linear. */
+export const MaterialTexturesSchema = z
+  .object(
+    Object.fromEntries(
+      TEXTURE_SLOTS.map((slot) => [slot, AssetUriSchema.nullable().default(null)]),
+    ) as {
+      [K in TextureSlot]: z.ZodDefault<z.ZodNullable<typeof AssetUriSchema>>;
+    },
+  )
+  .prefault({});
+export type MaterialTextures = z.infer<typeof MaterialTexturesSchema>;
+
+/** UV placement shared by every texture of a material. */
+export const UvTransformSchema = z.object({
+  repeat: z
+    .tuple([z.number().min(0.001).max(1000), z.number().min(0.001).max(1000)])
+    .default([1, 1]),
+  offset: z.tuple([z.number(), z.number()]).default([0, 0]),
+  /** Degrees. */
+  rotation: z.number().default(0),
+});
+export type UvTransform = z.infer<typeof UvTransformSchema>;
+
+/** View-dependent thin-film rainbow layered on a physical material. */
+export const HolographicSchema = z.object({
+  enabled: z.boolean().default(false),
+  /** Strength of the rainbow sheen. */
+  strength: z.number().min(0).max(4).default(1),
+  /** Number of colour bands across the view angle. */
+  bands: z.number().min(0.1).max(20).default(2.5),
+  /** Hue offset, degrees. */
+  shift: z.number().min(-360).max(360).default(0),
+  /** Concentrates the effect on grazing angles (0 = everywhere). */
+  fresnel: z.number().min(0).max(8).default(1.5),
+  /** Fine diffraction lines across the surface (0 = off). */
+  lines: z.number().min(0).max(1).default(0.3),
+});
+export type Holographic = z.infer<typeof HolographicSchema>;
 
 /**
  * Physically based material, mapped 1:1 onto `THREE.MeshPhysicalMaterial`.
@@ -49,10 +99,32 @@ export const PhysicalMaterialSchema = z.object({
   emissiveIntensity: z.number().min(0).max(100).default(0),
   envMapIntensity: z.number().min(0).max(10).default(1),
   flatShading: z.boolean().default(false),
+
+  // Textures (v0.2)
+  textures: MaterialTexturesSchema,
+  uv: UvTransformSchema.prefault({}),
+  normalScale: z.number().min(-10).max(10).default(1),
+  aoIntensity: unit().default(1),
+  holographic: HolographicSchema.prefault({}),
 });
 export type PhysicalMaterial = z.infer<typeof PhysicalMaterialSchema>;
 
-/** Material union. v0.2 adds `matcap`. */
-export const MaterialSpecSchema = z.discriminatedUnion('type', [PhysicalMaterialSchema]);
+/** Unlit "material capture": a sphere image gives the whole look, independent of lights. */
+export const MatcapMaterialSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().default('Matcap'),
+  type: z.literal('matcap'),
+  preset: z.string().optional(),
+  matcap: AssetUriSchema,
+  color: ColorSchema.default('#ffffff'),
+  opacity: unit().default(1),
+  flatShading: z.boolean().default(false),
+});
+export type MatcapMaterial = z.infer<typeof MatcapMaterialSchema>;
+
+export const MaterialSpecSchema = z.discriminatedUnion('type', [
+  PhysicalMaterialSchema,
+  MatcapMaterialSchema,
+]);
 export type MaterialSpec = z.infer<typeof MaterialSpecSchema>;
 export type MaterialSpecInput = z.input<typeof MaterialSpecSchema>;

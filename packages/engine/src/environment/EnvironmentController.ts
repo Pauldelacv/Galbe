@@ -16,15 +16,26 @@ const DEG = Math.PI / 180;
  * PMREM internally and caches it, and exposes rotation, intensity and blurriness on the
  * scene, so changing those never re-filters the HDRI.
  */
+/**
+ * Returns a URL for a higher-resolution version of a builtin HDRI (`2k`, `4k`), or null
+ * when there is none. Hosts implement downloading and caching.
+ */
+export type HdriVariantResolver = (
+  uri: AssetUri,
+  resolution: Environment['resolution'],
+) => Promise<string | null>;
+
 export class EnvironmentController {
-  private readonly textures = new Map<AssetUri, Promise<Texture | null>>();
-  private readonly loaded = new Map<AssetUri, Texture | null>();
-  private current: AssetUri | null = null;
+  private readonly textures = new Map<string, Promise<Texture | null>>();
+  private readonly loaded = new Map<string, Texture | null>();
+  private current: string | null = null;
+  private shown: Texture | null = null;
   private readonly backgroundColor = new Color();
 
   constructor(
     private readonly source: AssetSource,
     private readonly onChange: () => void,
+    private readonly variants?: HdriVariantResolver,
   ) {}
 
   /** True while the requested HDRI is still loading. */
@@ -32,9 +43,25 @@ export class EnvironmentController {
     return this.current !== null && !this.loaded.has(this.current);
   }
 
+  private keyOf(environment: Environment): string | null {
+    if (!environment.hdri) return null;
+    const variant =
+      this.variants && environment.resolution !== '1k' && environment.hdri.startsWith('builtin:');
+    return variant ? `${environment.hdri}@${environment.resolution}` : environment.hdri;
+  }
+
   apply(scene: Scene, environment: Environment, background: Background): void {
-    this.current = environment.hdri;
-    const texture = environment.hdri ? this.texture(environment.hdri) : null;
+    const key = this.keyOf(environment);
+    this.current = key;
+    let texture: Texture | null = null;
+    if (key && environment.hdri) {
+      texture = this.texture(key, environment);
+      // While a sharper variant downloads, keep showing the bundled one (or the last one).
+      if (!texture && key !== environment.hdri)
+        texture = this.texture(environment.hdri, environment);
+      if (!texture && this.shown && this.loaded.has(key) === false) texture = this.shown;
+    }
+    this.shown = texture;
 
     scene.environment = texture;
     scene.environmentIntensity = environment.intensity;
@@ -57,21 +84,31 @@ export class EnvironmentController {
   }
 
   /** Resolves once the HDRI is loaded (or failed). Useful before exporting. */
-  async ready(uri: AssetUri | null): Promise<void> {
-    if (uri) await this.load(uri);
+  async ready(environment: Environment): Promise<void> {
+    const key = this.keyOf(environment);
+    if (key) await this.load(key, environment);
   }
 
-  private texture(uri: AssetUri): Texture | null {
-    if (this.loaded.has(uri)) return this.loaded.get(uri) ?? null;
-    void this.load(uri);
+  private texture(key: string, environment: Environment): Texture | null {
+    if (this.loaded.has(key)) return this.loaded.get(key) ?? null;
+    void this.load(key, environment);
     return null;
   }
 
-  private load(uri: AssetUri): Promise<Texture | null> {
-    let promise = this.textures.get(uri);
+  private resolve(key: string, environment: Environment): Promise<string> {
+    const uri = environment.hdri!;
+    if (key === uri || !this.variants) return this.source.resolveUrl(uri);
+    return this.variants(uri, environment.resolution).then(
+      (url) => url ?? this.source.resolveUrl(uri),
+      () => this.source.resolveUrl(uri),
+    );
+  }
+
+  private load(key: string, environment: Environment): Promise<Texture | null> {
+    const uri = key;
+    let promise = this.textures.get(key);
     if (!promise) {
-      promise = this.source
-        .resolveUrl(uri)
+      promise = this.resolve(key, environment)
         .then((url) => new HDRLoader().loadAsync(url))
         .then((texture: DataTexture) => {
           texture.mapping = EquirectangularReflectionMapping;
@@ -82,11 +119,11 @@ export class EnvironmentController {
           return null;
         })
         .then((texture) => {
-          this.loaded.set(uri, texture);
-          if (uri === this.current) this.onChange();
+          this.loaded.set(key, texture);
+          this.onChange();
           return texture;
         });
-      this.textures.set(uri, promise);
+      this.textures.set(key, promise);
     }
     return promise;
   }

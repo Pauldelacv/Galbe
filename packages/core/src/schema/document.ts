@@ -1,8 +1,9 @@
 import { z } from 'zod';
+import { EffectSpecSchema } from '../effects.ts';
 import { CURRENT_SCHEMA_VERSION } from '../version.ts';
 import { AssetUriSchema, ColorSchema, unit, Vec3Schema } from './common.ts';
 import { MaterialSpecSchema } from './material.ts';
-import { SceneNodeSchema } from './nodes.ts';
+import { nodeMaterialIds, SceneNodeSchema } from './nodes.ts';
 
 export const FRAME_PRESET_IDS = ['1:1', '4:5', '9:16', '16:9', 'a4', 'custom'] as const;
 export type FramePresetId = (typeof FRAME_PRESET_IDS)[number];
@@ -43,6 +44,11 @@ export const EnvironmentSchema = z.object({
   intensity: z.number().min(0).max(10).default(1),
   /** Rotation around the vertical axis, degrees. */
   rotation: z.number().min(-360).max(360).default(0),
+  /**
+   * Resolution of builtin HDRIs. Bundled files are 1K; `2k`/`4k` are downloaded on demand
+   * from Poly Haven (CC0) and cached locally, for sharper reflections in large exports.
+   */
+  resolution: z.enum(['1k', '2k', '4k']).default('1k'),
 });
 export type Environment = z.infer<typeof EnvironmentSchema>;
 
@@ -64,6 +70,22 @@ export const GroundSchema = z.object({
   offset: z.number().min(0).max(10).default(0.02),
   /** Ground size relative to the content's footprint. */
   scale: z.number().min(1).max(20).default(2.5),
+  /** Mirror-like floor under the content. */
+  reflection: z
+    .object({
+      enabled: z.boolean().default(false),
+      /** Reflection strength. */
+      strength: unit().default(0.5),
+      /** 0 = mirror, 1 = very blurry. */
+      blur: unit().default(0.35),
+      /** Softness of the floor's circular edge (larger = wider fade). */
+      fade: z.number().min(0.01).max(5).default(1.5),
+      /** Floor colour under the reflection. */
+      color: ColorSchema.default('#000000'),
+      /** Opacity of the floor colour (0 = only the reflection is visible). */
+      floorOpacity: unit().default(0),
+    })
+    .prefault({}),
 });
 export type Ground = z.infer<typeof GroundSchema>;
 
@@ -142,6 +164,9 @@ export const GalbeDocumentSchema = z
     materials: z.record(z.string(), MaterialSpecSchema).default({}),
     nodes: z.array(SceneNodeSchema).default([]),
     assets: z.record(z.string(), AssetEntrySchema).default({}),
+
+    /** Post-processing stack, applied in order (within each stage). */
+    effects: z.array(EffectSpecSchema).default([]),
   })
   .superRefine((doc, ctx) => {
     const ids = new Set<string>();
@@ -163,12 +188,14 @@ export const GalbeDocumentSchema = z
           path: ['nodes', index, 'parentId'],
         });
       }
-      if ('materialId' in node && !(node.materialId in doc.materials)) {
-        ctx.addIssue({
-          code: 'custom',
-          message: `Unknown material "${node.materialId}"`,
-          path: ['nodes', index, 'materialId'],
-        });
+      for (const materialId of nodeMaterialIds(node)) {
+        if (!(materialId in doc.materials)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Unknown material "${materialId}"`,
+            path: ['nodes', index, 'materialId'],
+          });
+        }
       }
     }
     for (const [key, material] of Object.entries(doc.materials)) {

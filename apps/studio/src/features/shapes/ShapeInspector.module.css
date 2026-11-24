@@ -1,0 +1,73 @@
+.hint {
+  margin: 0 0 var(--g-space-3);
+  color: var(--g-text-muted);
+  font-size: var(--g-text-xs);
+}
+
+.paths {
+  max-height: 220px;
+  margin: 0 0 var(--g-space-3);
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.path {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-3);
+  width: 100%;
+  height: 26px;
+  padding: 0 var(--g-space-2) 0 var(--g-space-3);
+  border: 0;
+  border-radius: var(--g-radius-sm);
+  background: transparent;
+  color: var(--g-text);
+  font-size: var(--g-text-sm);
+  text-align: left;
+}
+
+.path:hover {
+  background: var(--g-bg-control);
+}
+
+.path[data-active] {
+  background: var(--g-accent-soft);
+  color: var(--g-text-strong);
+}
+
+.path[data-hidden] .name,
+.path[data-hidden] .swatch {
+  opacity: 0.4;
+}
+
+.swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.15);
+}
+
+.name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.badge {
+  color: var(--g-text-faint);
+  font-size: var(--g-text-xs);
+}
+
+.eye {
+  display: inline-flex;
+  color: var(--g-text-faint);
+}
+
+.eye svg {
+  width: 13px;
+  height: 13px;
+}

@@ -7,8 +7,16 @@ export interface ThreeTileRendererOptions {
   camera: Camera;
   /** Hook run before each tile (e.g. pre-passes, temporary background changes). */
   beforeRender?: (tile: Tile) => void;
-  /** Custom draw call, e.g. a post-processing composer (v0.2). Defaults to renderer.render. */
-  draw?: (renderer: WebGLRenderer, scene: Scene, camera: Camera) => void;
+  /**
+   * Custom draw call, e.g. a post-processing stack. Receives the tile being drawn and the
+   * full output size so screen-space effects can work in full-frame coordinates.
+   */
+  draw?: (
+    renderer: WebGLRenderer,
+    scene: Scene,
+    camera: Camera,
+    view: { tile: Tile; full: Size },
+  ) => void;
 }
 
 /**
@@ -46,7 +54,8 @@ export function createThreeTileRenderer({
         perspective.updateProjectionMatrix();
       }
       beforeRender?.(tile);
-      (draw ?? ((r, s, c) => r.render(s, c)))(renderer, scene, camera);
+      if (draw) draw(renderer, scene, camera, { tile, full });
+      else renderer.render(scene, camera);
       // Copy while the drawing buffer is still valid (same task, before any resize).
       present(renderer.domElement);
     } finally {

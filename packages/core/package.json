@@ -1,6 +1,6 @@
 {
   "name": "@galbe/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Galbe scene document: versioned schema, migrations, operations, presets and the .galbe file format.",
   "license": "MIT",
   "type": "module",

@@ -1,7 +1,16 @@
+import { createGroupNode } from './factories.ts';
 import { createId } from './ids.ts';
 import type { GalbeDocument } from './schema/document.ts';
 import type { MaterialSpec } from './schema/material.ts';
-import { isMeshNode, type SceneNode } from './schema/nodes.ts';
+import { isMeshNode, nodeMaterialIds, type SceneNode } from './schema/nodes.ts';
+import {
+  composeTransform,
+  decomposeTransform,
+  identity,
+  invert,
+  type Mat4,
+  multiply,
+} from './transform.ts';
 
 /*
  * Document operations. They MUTATE the document they receive, which makes them usable
@@ -77,7 +86,7 @@ export function removeNodes(doc: GalbeDocument, ids: Iterable<string>): void {
 }
 
 export function pruneMaterials(doc: GalbeDocument): void {
-  const used = new Set(doc.nodes.filter(isMeshNode).map((node) => node.materialId));
+  const used = new Set(doc.nodes.flatMap(nodeMaterialIds));
   for (const id of Object.keys(doc.materials)) {
     if (!used.has(id)) delete doc.materials[id];
   }
@@ -113,12 +122,18 @@ export function duplicateNodes(
       topLevel.push(copy.id);
     }
     if (isMeshNode(copy)) {
-      const material = doc.materials[copy.materialId];
-      if (material) {
+      const remap = new Map<string, string>();
+      for (const materialId of nodeMaterialIds(copy)) {
+        const material = doc.materials[materialId];
+        if (!material) continue;
         const materialCopy = { ...structuredClone(material), id: createId() };
         doc.materials[materialCopy.id] = materialCopy;
-        copy.materialId = materialCopy.id;
+        remap.set(materialId, materialCopy.id);
       }
+      copy.materialId = remap.get(copy.materialId) ?? copy.materialId;
+      if (copy.type === 'shape')
+        for (const path of copy.paths)
+          if (path.materialId) path.materialId = remap.get(path.materialId) ?? path.materialId;
     }
     copies.push(copy);
   }
@@ -146,6 +161,124 @@ export function assignMaterial(
   if (!node || !isMeshNode(node)) return;
   const id = node.materialId;
   doc.materials[id] = { ...spec, id } as MaterialSpec;
+}
+
+/** Ancestors of a node, nearest first. */
+export function ancestorsOf(doc: GalbeDocument, id: string): SceneNode[] {
+  const out: SceneNode[] = [];
+  const seen = new Set<string>([id]);
+  let current = findNode(doc, id);
+  while (current?.parentId && !seen.has(current.parentId)) {
+    seen.add(current.parentId);
+    const parent = findNode(doc, current.parentId);
+    if (!parent) break;
+    out.push(parent);
+    current = parent;
+  }
+  return out;
+}
+
+/** World matrix of a node (or identity for the root). */
+export function worldMatrix(doc: GalbeDocument, id: string | null): Mat4 {
+  if (id === null) return identity();
+  const chain = [findNode(doc, id), ...ancestorsOf(doc, id)].filter(Boolean) as SceneNode[];
+  let m = identity();
+  for (const node of chain.reverse()) m = multiply(m, composeTransform(node.transform));
+  return m;
+}
+
+/** Whether `ancestorId` is `id` or one of its ancestors. */
+export function isAncestorOrSelf(doc: GalbeDocument, ancestorId: string, id: string): boolean {
+  return ancestorId === id || ancestorsOf(doc, id).some((node) => node.id === ancestorId);
+}
+
+/** Keeps only ids with no selected ancestor (moving a parent already moves its children). */
+export function topLevelIds(doc: GalbeDocument, ids: Iterable<string>): string[] {
+  const set = new Set(ids);
+  return doc.nodes
+    .filter((node) => set.has(node.id) && !ancestorsOf(doc, node.id).some((a) => set.has(a.id)))
+    .map((node) => node.id);
+}
+
+/**
+ * Moves a node under a new parent (or the root), keeping its world transform. `index` is
+ * the insert position in `doc.nodes` (defaults to right after the new parent's last child,
+ * i.e. on top of its siblings). Refuses cycles.
+ */
+export function reparentNode(
+  doc: GalbeDocument,
+  id: string,
+  parentId: string | null,
+  index?: number,
+): boolean {
+  const node = findNode(doc, id);
+  if (!node) return false;
+  if (parentId !== null) {
+    const parent = findNode(doc, parentId);
+    if (parent?.type !== 'group' || isAncestorOrSelf(doc, id, parentId)) return false;
+  }
+  if (node.parentId !== parentId) {
+    const world = worldMatrix(doc, id);
+    const parentWorld = worldMatrix(doc, parentId);
+    node.transform = decomposeTransform(multiply(invert(parentWorld), world));
+    node.parentId = parentId;
+  }
+  const from = nodeIndex(doc, id);
+  const [moved] = doc.nodes.splice(from, 1);
+  let to = index;
+  if (to === undefined) {
+    const siblings = doc.nodes
+      .map((candidate, i) => ({ candidate, i }))
+      .filter(({ candidate }) => candidate.parentId === parentId);
+    to = siblings.length
+      ? siblings.at(-1)!.i + 1
+      : parentId === null
+        ? doc.nodes.length
+        : nodeIndex(doc, parentId) + 1;
+  } else if (from < to) to -= 1;
+  doc.nodes.splice(Math.max(0, Math.min(to, doc.nodes.length)), 0, moved!);
+  return true;
+}
+
+/**
+ * Wraps nodes in a new group placed at their common parent, centred on `pivot` (in the
+ * parent's space; defaults to the origin of the parent). World transforms are preserved.
+ */
+export function groupNodes(
+  doc: GalbeDocument,
+  ids: string[],
+  options: { name?: string; pivot?: [number, number, number] } = {},
+): string | null {
+  const top = topLevelIds(doc, ids);
+  if (!top.length) return null;
+  const parents = new Set(top.map((id) => findNode(doc, id)!.parentId));
+  const parentId = parents.size === 1 ? [...parents][0]! : null;
+  const group = createGroupNode({
+    name: options.name ?? 'Group',
+    parentId,
+    transform: { position: options.pivot ?? [0, 0, 0] },
+  });
+  const insertAt = Math.max(...top.map((id) => nodeIndex(doc, id))) + 1;
+  doc.nodes.splice(insertAt, 0, group);
+  // Keep the children's relative order.
+  for (const id of top) reparentNode(doc, id, group.id);
+  return group.id;
+}
+
+/** Dissolves groups, moving their children to the group's parent. Returns the children. */
+export function ungroupNodes(doc: GalbeDocument, groupIds: string[]): string[] {
+  const released: string[] = [];
+  for (const groupId of groupIds) {
+    const group = findNode(doc, groupId);
+    if (group?.type !== 'group') continue;
+    const children = childrenOf(doc, groupId);
+    for (const child of children) {
+      reparentNode(doc, child.id, group.parentId, nodeIndex(doc, groupId));
+      released.push(child.id);
+    }
+    doc.nodes = doc.nodes.filter((node) => node.id !== groupId);
+  }
+  return released;
 }
 
 export function touch(doc: GalbeDocument, now = new Date()): void {

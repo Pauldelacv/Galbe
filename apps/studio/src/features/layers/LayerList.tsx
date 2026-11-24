@@ -1,10 +1,21 @@
-import { reorderNode, type SceneNode } from '@galbe/core';
-import { Eye, EyeOff, Folder, Lock, LockOpen, Type } from 'lucide-react';
+import { findNode, isAncestorOrSelf, type SceneNode } from '@galbe/core';
+import { Box, Circle, Eye, EyeOff, Folder, Lock, LockOpen, Shapes, Type } from 'lucide-react';
 import { type DragEvent, useMemo, useState } from 'react';
 import { renameNode } from '../../state/actions.ts';
 import { documentApi, useDocumentStore } from '../../state/documentStore.ts';
+import { moveLayer } from '../../state/objectActions.ts';
 import { useUiStore } from '../../state/uiStore.ts';
 import styles from './LayerList.module.css';
+
+const ICONS: Record<SceneNode['type'], typeof Type> = {
+  text: Type,
+  group: Folder,
+  shape: Shapes,
+  primitive: Circle,
+  model: Box,
+};
+
+type DropPosition = 'above' | 'below' | 'inside';
 
 interface Row {
   node: SceneNode;
@@ -32,7 +43,7 @@ export function LayerList() {
   const rows = useMemo(() => flatten(nodes), [nodes]);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [dragging, setDragging] = useState<string | null>(null);
-  const [over, setOver] = useState<string | null>(null);
+  const [over, setOver] = useState<{ id: string; position: DropPosition } | null>(null);
 
   const toggle = (id: string, key: 'visible' | 'locked') =>
     documentApi.update(
@@ -43,25 +54,34 @@ export function LayerList() {
       { label: key === 'visible' ? 'Toggle visibility' : 'Toggle lock' },
     );
 
-  const onDrop = (event: DragEvent, targetId: string) => {
+  const positionOf = (event: DragEvent, node: SceneNode): DropPosition => {
+    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
+    const y = (event.clientY - rect.top) / rect.height;
+    if (node.type === 'group' && y > 0.25 && y < 0.75) return 'inside';
+    return y < 0.5 ? 'above' : 'below';
+  };
+
+  const onDrop = (event: DragEvent, target: SceneNode) => {
     event.preventDefault();
+    const position = over?.id === target.id ? over.position : 'above';
     setOver(null);
     const sourceId = dragging;
     setDragging(null);
-    if (!sourceId || sourceId === targetId) return;
-    documentApi.update(
-      (draft) =>
-        reorderNode(
-          draft,
-          sourceId,
-          draft.nodes.findIndex((node) => node.id === targetId),
-        ),
-      { label: 'Reorder' },
-    );
+    const doc = documentApi.get();
+    if (!sourceId || sourceId === target.id || !findNode(doc, sourceId)) return;
+    if (isAncestorOrSelf(doc, sourceId, target.id)) return; // no dropping into itself
+    if (position === 'inside') return moveLayer(sourceId, target.id);
+    // The list shows the top of the stack first: "above" = later in the document.
+    const index = doc.nodes.findIndex((node) => node.id === target.id);
+    moveLayer(sourceId, target.parentId, position === 'above' ? index + 1 : index);
   };
 
   if (!rows.length) {
-    return <p className={styles.empty}>No layers yet. Press T to add text.</p>;
+    return (
+      <p className={styles.empty}>
+        No layers yet. Press T to add text, or drop an SVG or a 3D model.
+      </p>
+    );
   }
 
   return (
@@ -74,7 +94,7 @@ export function LayerList() {
             className={styles.row}
             data-selected={selected || undefined}
             data-hidden={!node.visible || undefined}
-            data-over={over === node.id || undefined}
+            data-over={over?.id === node.id ? over.position : undefined}
             style={{ paddingLeft: 8 + depth * 14 }}
             draggable={renaming !== node.id}
             onDragStart={(event) => {
@@ -85,10 +105,12 @@ export function LayerList() {
             onDragOver={(event) => {
               if (!dragging) return;
               event.preventDefault();
-              setOver(node.id);
+              const position = positionOf(event, node);
+              if (over?.id !== node.id || over.position !== position)
+                setOver({ id: node.id, position });
             }}
-            onDragLeave={() => setOver((current) => (current === node.id ? null : current))}
-            onDrop={(event) => onDrop(event, node.id)}
+            onDragLeave={() => setOver((current) => (current?.id === node.id ? null : current))}
+            onDrop={(event) => onDrop(event, node)}
             onDragEnd={() => {
               setDragging(null);
               setOver(null);
@@ -102,7 +124,10 @@ export function LayerList() {
             onDoubleClick={() => setRenaming(node.id)}
           >
             <span className={styles.icon} aria-hidden>
-              {node.type === 'text' ? <Type /> : <Folder />}
+              {(() => {
+                const Icon = ICONS[node.type];
+                return <Icon />;
+              })()}
             </span>
             {renaming === node.id ? (
               <input
