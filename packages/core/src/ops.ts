@@ -1,3 +1,4 @@
+import { copyNodeAnimation, pruneAnimation } from './animation/keyframes.ts';
 import { createGroupNode } from './factories.ts';
 import { createId } from './ids.ts';
 import type { GalbeDocument } from './schema/document.ts';
@@ -83,10 +84,14 @@ export function removeNodes(doc: GalbeDocument, ids: Iterable<string>): void {
   const doomed = withDescendants(doc, ids);
   doc.nodes = doc.nodes.filter((node) => !doomed.has(node.id));
   pruneMaterials(doc);
+  pruneAnimation(doc);
 }
 
 export function pruneMaterials(doc: GalbeDocument): void {
   const used = new Set(doc.nodes.flatMap(nodeMaterialIds));
+  // Materials a node transitions into are in use even when no node shows them yet.
+  for (const motion of doc.animation.motions)
+    if (motion.type === 'materialTransition') used.add(motion.toMaterialId);
   for (const id of Object.keys(doc.materials)) {
     if (!used.has(id)) delete doc.materials[id];
   }
@@ -140,6 +145,7 @@ export function duplicateNodes(
   // Insert copies right after the last selected node to keep them near the originals.
   const lastIndex = Math.max(...[...source].map((id) => nodeIndex(doc, id)));
   doc.nodes.splice(lastIndex + 1, 0, ...copies);
+  for (const [from, to] of idMap) copyNodeAnimation(doc, from, to);
   return topLevel;
 }
 
