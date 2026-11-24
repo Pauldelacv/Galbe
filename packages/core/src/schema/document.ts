@@ -78,8 +78,8 @@ export const GroundSchema = z.object({
       strength: unit().default(0.5),
       /** 0 = mirror, 1 = very blurry. */
       blur: unit().default(0.35),
-      /** How quickly the reflection fades with height above the floor, scene units. */
-      fade: z.number().min(0.01).max(50).default(1.5),
+      /** Softness of the floor's circular edge (larger = wider fade). */
+      fade: z.number().min(0.01).max(5).default(1.5),
       /** Floor colour under the reflection. */
       color: ColorSchema.default('#000000'),
       /** Opacity of the floor colour (0 = only the reflection is visible). */

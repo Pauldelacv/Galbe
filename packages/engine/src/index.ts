@@ -1,4 +1,7 @@
 export * from './assets/AssetSource.ts';
+export * from './effects/customEffects.ts';
+export * from './effects/luts.ts';
+export * from './effects/PostStack.ts';
 export * from './environment/EnvironmentController.ts';
 export * from './fonts/FontLibrary.ts';
 export * from './fonts/gposKerning.ts';
@@ -7,6 +10,7 @@ export * from './geometry/noise.ts';
 export * from './geometry/primitives.ts';
 export * from './geometry/soup.ts';
 export * from './geometry/subdivide.ts';
+export * from './ground/ReflectiveGround.ts';
 export * from './materials/MaterialLibrary.ts';
 export * from './materials/TextureLibrary.ts';
 export * from './models/ModelLibrary.ts';

@@ -1,9 +1,11 @@
 import { BUILTIN_FONTS } from './fonts.generated.ts';
 import { BUILTIN_HDRIS } from './hdri.generated.ts';
+import { BUILTIN_MATCAPS } from './matcaps.generated.ts';
 import type { BuiltinFontFace, BuiltinFontFamily } from './types.ts';
 
 export { BUILTIN_FONTS } from './fonts.generated.ts';
 export { BUILTIN_HDRIS } from './hdri.generated.ts';
+export { BUILTIN_MATCAPS } from './matcaps.generated.ts';
 export type * from './types.ts';
 
 /**
@@ -17,6 +19,7 @@ for (const family of BUILTIN_FONTS) {
   for (const face of family.faces) for (const id of face.files) files.set(id, `${id}.ttf`);
 }
 for (const hdri of BUILTIN_HDRIS) files.set(hdri.id, hdri.file);
+for (const matcap of BUILTIN_MATCAPS) files.set(matcap.id, matcap.file);
 
 /** File path (relative to the builtin base) for a builtin id, e.g. `hdri/x` → `hdri/x.hdr`. */
 export function builtinFilePath(id: string): string | undefined {

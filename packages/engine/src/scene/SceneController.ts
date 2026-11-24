@@ -19,12 +19,14 @@ import {
   type WebGLRenderer,
 } from 'three';
 import type { AssetSource } from '../assets/AssetSource.ts';
+import { LutLibrary } from '../effects/luts.ts';
 import {
   EnvironmentController,
   type HdriVariantResolver,
 } from '../environment/EnvironmentController.ts';
 import { FontLibrary } from '../fonts/FontLibrary.ts';
 import { buildPrimitiveGeometry, primitiveBuildKey } from '../geometry/primitives.ts';
+import { ReflectiveGround } from '../ground/ReflectiveGround.ts';
 import { MaterialLibrary } from '../materials/MaterialLibrary.ts';
 import { TextureLibrary } from '../materials/TextureLibrary.ts';
 import { cloneModel, ModelLibrary } from '../models/ModelLibrary.ts';
@@ -76,10 +78,12 @@ export class SceneController {
   /** Node objects. Each node is a Group (transform) holding its mesh. */
   readonly content = new Group();
   readonly contactShadows = new ContactShadows();
+  readonly reflection = new ReflectiveGround();
   readonly lights = new LightsController();
   readonly textures: TextureLibrary;
   readonly materials: MaterialLibrary;
   readonly models: ModelLibrary;
+  readonly luts: LutLibrary;
   readonly fonts: FontLibrary;
   readonly environment: EnvironmentController;
   readonly status: SceneStatus = { loading: 0, errors: new Map() };
@@ -100,6 +104,7 @@ export class SceneController {
     });
     this.materials = new MaterialLibrary(this.textures);
     this.models = new ModelLibrary(options.assets);
+    this.luts = new LutLibrary(options.assets, () => this.onChange());
     this.environment = new EnvironmentController(
       options.assets,
       () => {
@@ -118,12 +123,17 @@ export class SceneController {
   attach(scene: Scene, { content = true }: { content?: boolean } = {}): void {
     this.scene = scene;
     if (content) scene.add(this.content);
-    scene.add(this.contactShadows.object, this.lights.object);
+    scene.add(this.contactShadows.object, this.reflection.object, this.lights.object);
     if (this.doc) this.resync();
   }
 
   detach(): void {
-    this.scene?.remove(this.content, this.contactShadows.object, this.lights.object);
+    this.scene?.remove(
+      this.content,
+      this.contactShadows.object,
+      this.reflection.object,
+      this.lights.object,
+    );
     this.scene = null;
   }
 
@@ -178,20 +188,31 @@ export class SceneController {
 
     if (this.scene) this.environment.apply(this.scene, doc.environment, doc.background);
     this.lights.sync(doc.lights);
+    // Start loading LUTs now so exports never render a frame without them.
+    for (const effect of doc.effects)
+      if (effect.enabled && effect.type === 'lut' && typeof effect.params.lut === 'string')
+        this.luts.get(effect.params.lut);
     if (contentChanged || previous?.ground !== doc.ground) {
       this.content.updateMatrixWorld(true);
+      const bounds = this.bounds();
       this.contactShadows.update(
         doc.ground.contactShadow,
-        this.bounds(),
+        bounds,
         doc.ground.offset,
         doc.ground.scale,
       );
+      this.reflection.update(doc.ground, bounds);
     }
     this.status.loading = this.loadingCount();
   }
 
   private loadingCount(): number {
-    return this.pending.size + (this.environment.pending ? 1 : 0) + this.textures.pending;
+    return (
+      this.pending.size +
+      (this.environment.pending ? 1 : 0) +
+      this.textures.pending +
+      this.luts.pending
+    );
   }
 
   /** Re-applies the last document (after an async load). */
@@ -209,9 +230,15 @@ export class SceneController {
 
   /** Resolves when every font and HDRI requested so far has loaded (or failed). */
   async whenReady(): Promise<void> {
-    while (this.pending.size || this.environment.pending || this.textures.pending) {
+    while (
+      this.pending.size ||
+      this.environment.pending ||
+      this.textures.pending ||
+      this.luts.pending
+    ) {
       await Promise.allSettled([...this.pending]);
       await this.textures.whenReady();
+      await this.luts.whenReady();
       if (this.doc) await this.environment.ready(this.doc.environment);
     }
   }
@@ -432,7 +459,9 @@ export class SceneController {
     this.materials.dispose();
     this.textures.dispose();
     this.models.dispose();
+    this.luts.dispose();
     this.contactShadows.dispose();
+    this.reflection.dispose();
     this.environment.dispose();
     this.lights.dispose();
   }

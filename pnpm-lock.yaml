@@ -262,7 +262,11 @@ importers:
         specifier: 8.3.8
         version: 8.3.8(@types/node@22.20.5)
 
-  packages/assets: {}
+  packages/assets:
+    devDependencies:
+      three:
+        specifier: 0.187.0
+        version: 0.187.0
 
   packages/core:
     dependencies:
