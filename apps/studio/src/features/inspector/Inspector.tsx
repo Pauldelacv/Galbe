@@ -1,11 +1,18 @@
-import { isMeshNode, type SceneNode } from '@galbe/core';
-import { useEffect, useMemo, useState } from 'react';
+import { type GroupNode, isMeshNode, type SceneNode } from '@galbe/core';
+import { Group, Ungroup } from 'lucide-react';
+import { useEffect, useMemo } from 'react';
 import { renameNode } from '../../state/actions.ts';
 import { useDocumentStore } from '../../state/documentStore.ts';
+import { groupSelection, ungroupSelection } from '../../state/objectActions.ts';
 import { useUiStore } from '../../state/uiStore.ts';
-import { Segmented } from '../../ui/controls.tsx';
+import { Button, Segmented } from '../../ui/controls.tsx';
+import { Section } from '../../ui/Section.tsx';
+import { EffectsPanel } from '../effects/EffectsPanel.tsx';
 import { SceneInspector } from '../environment/SceneInspector.tsx';
 import { MaterialSection } from '../materials/MaterialSection.tsx';
+import { ModelInspector } from '../models/ModelInspector.tsx';
+import { PrimitiveInspector } from '../primitives/PrimitiveInspector.tsx';
+import { ShapeInspector } from '../shapes/ShapeInspector.tsx';
 import { TextInspector } from '../type/TextInspector.tsx';
 import styles from './Inspector.module.css';
 import { TransformSection } from './TransformSection.tsx';
@@ -17,20 +24,26 @@ export function Inspector() {
     () => nodes.filter((node) => selection.includes(node.id)),
     [nodes, selection],
   );
-  const [tab, setTab] = useState<'layer' | 'scene'>('layer');
+  const tab = useUiStore((state) => state.inspectorTab);
+  const setTab = useUiStore((state) => state.setInspectorTab);
+  const effectCount = useDocumentStore(
+    (state) => state.doc.effects.filter((e) => e.enabled).length,
+  );
   const hasSelection = selected.length > 0;
+  const selectionKey = selection.join(',');
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: switch tab when the selection changes
   useEffect(() => {
     if (hasSelection) setTab('layer');
-  }, [hasSelection]);
+  }, [selectionKey]);
 
-  const showScene = !hasSelection || tab === 'scene';
+  const current = tab === 'layer' && !hasSelection ? 'scene' : tab;
   return (
     <aside className={styles.inspector} aria-label="Inspector" data-testid="inspector">
       <div className={styles.tabs}>
         <Segmented
           label="Inspector tab"
-          value={showScene ? 'scene' : 'layer'}
+          value={current}
           onChange={setTab}
           options={[
             {
@@ -43,11 +56,22 @@ export function Inspector() {
               title: hasSelection ? 'Selected layer' : 'Select a layer to edit it',
             },
             { value: 'scene', label: 'Scene' },
+            {
+              value: 'effects',
+              label: effectCount ? `Effects · ${effectCount}` : 'Effects',
+              title: 'Post-processing stack',
+            },
           ]}
         />
       </div>
       <div className={styles.scroll}>
-        {showScene ? <SceneInspector /> : <NodeInspector nodes={selected} />}
+        {current === 'scene' ? (
+          <SceneInspector />
+        ) : current === 'effects' ? (
+          <EffectsPanel />
+        ) : (
+          <NodeInspector nodes={selected} />
+        )}
       </div>
     </aside>
   );
@@ -74,8 +98,44 @@ function NodeInspector({ nodes }: { nodes: SceneNode[] }) {
         </div>
       )}
       {node?.type === 'text' && <TextInspector node={node} />}
+      {node?.type === 'shape' && <ShapeInspector node={node} />}
+      {node?.type === 'primitive' && <PrimitiveInspector node={node} />}
+      {node?.type === 'model' && <ModelInspector node={node} />}
+      {node?.type === 'group' && <GroupSection node={node} />}
+      {nodes.length > 1 && <MultiSection count={nodes.length} />}
       {meshes.length > 0 && <MaterialSection nodes={meshes} />}
       {node && <TransformSection node={node} />}
     </>
+  );
+}
+
+function GroupSection({ node }: { node: GroupNode }) {
+  const children = useDocumentStore(
+    (state) => state.doc.nodes.filter((candidate) => candidate.parentId === node.id).length,
+  );
+  return (
+    <Section id="group" title="Group">
+      <p className={styles.note}>
+        {children} layer{children === 1 ? '' : 's'}. Move, rotate or scale the group to transform
+        them together. Drag layers onto it in the layer list.
+      </p>
+      <Button size="sm" icon={<Ungroup />} onClick={ungroupSelection}>
+        Ungroup
+      </Button>
+    </Section>
+  );
+}
+
+function MultiSection({ count }: { count: number }) {
+  return (
+    <Section id="multi" title={`${count} layers`}>
+      <p className={styles.note}>
+        The gizmo moves, rotates and scales the selection around its centre. Material edits apply to
+        every selected layer.
+      </p>
+      <Button size="sm" icon={<Group />} onClick={groupSelection}>
+        Group
+      </Button>
+    </Section>
   );
 }

@@ -7,7 +7,7 @@ import {
   renderImage,
   scaledSize,
 } from '@galbe/exporters';
-import { hideEditorHelpers } from '../../engine/cleanRender.ts';
+import { drawWithEffects, hideEditorHelpers } from '../../engine/cleanRender.ts';
 import { controller, requestRender, viewport } from '../../engine/studioEngine.ts';
 import { downloadBlob, slugify } from '../../lib/files.ts';
 import { useDocumentStore } from '../../state/documentStore.ts';
@@ -44,7 +44,11 @@ export async function exportImage(options: ExportImageOptions): Promise<Rendered
       format: options.format,
       quality: options.quality,
       maxTileSize,
-      padding: 48,
+      // Screen-space effects read neighbouring pixels: pad tiles by their reach.
+      padding: Math.max(
+        48,
+        Math.ceil((viewport.post?.active ? viewport.post.support : 0) * options.scale),
+      ),
       renderTile: createThreeTileRenderer({
         renderer: gl,
         scene,
@@ -52,6 +56,7 @@ export async function exportImage(options: ExportImageOptions): Promise<Rendered
         beforeRender: () => {
           scene.background = transparent ? null : background;
         },
+        draw: drawWithEffects,
       }),
       ...(options.onProgress ? { onProgress: options.onProgress } : {}),
       ...(options.signal ? { signal: options.signal } : {}),

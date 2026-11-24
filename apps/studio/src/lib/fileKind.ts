@@ -1,4 +1,14 @@
-export type FileKind = 'galbe' | 'font' | 'woff2' | 'hdri' | 'svg' | 'model' | 'unknown';
+export type FileKind =
+  | 'galbe'
+  | 'font'
+  | 'woff2'
+  | 'hdri'
+  | 'svg'
+  | 'model'
+  | 'image'
+  | 'lut'
+  | 'zip'
+  | 'unknown';
 
 const BY_EXTENSION: Record<string, FileKind> = {
   galbe: 'galbe',
@@ -12,6 +22,13 @@ const BY_EXTENSION: Record<string, FileKind> = {
   gltf: 'model',
   fbx: 'model',
   obj: 'model',
+  png: 'image',
+  jpg: 'image',
+  jpeg: 'image',
+  webp: 'image',
+  avif: 'image',
+  cube: 'lut',
+  zip: 'zip',
 };
 
 /** Identifies a file from its signature (magic bytes), for files without a useful name. */
@@ -25,6 +42,8 @@ export function sniffBytes(bytes: Uint8Array): FileKind {
   if (ascii === 'wOF2') return 'woff2';
   if (ascii.startsWith('#?')) return 'hdri';
   if (ascii === 'glTF') return 'model';
+  if (bytes[0] === 0x89 && ascii.slice(1) === 'PNG') return 'image';
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) return 'image';
   return 'unknown';
 }
 

@@ -1,6 +1,7 @@
-import { createUrlAssetSource, SceneController } from '@galbe/engine';
+import { createUrlAssetSource, type PostStack, SceneController } from '@galbe/engine';
 import type { Camera, Scene, WebGLRenderer } from 'three';
 import { create } from 'zustand';
+import { resolveHdriVariant } from '../features/environment/hdriVariants.ts';
 import { getAssetBlob } from '../persistence/assetStore.ts';
 
 /** Base URL of the builtin assets (fonts, HDRIs) shipped with the studio. */
@@ -43,6 +44,7 @@ export function publishStatus(): void {
 /** The single engine instance driving the viewport, exports and thumbnails. */
 export const controller = new SceneController({
   assets: assetSource,
+  hdriVariants: resolveHdriVariant,
   onChange: () => {
     publishStatus();
     invalidate();
@@ -50,10 +52,17 @@ export const controller = new SceneController({
 });
 
 /** Live handles on the viewport's renderer, scene and camera (set by the viewport). */
-export const viewport: { gl: WebGLRenderer | null; scene: Scene | null; camera: Camera | null } = {
+export const viewport: {
+  gl: WebGLRenderer | null;
+  scene: Scene | null;
+  camera: Camera | null;
+  /** Post-processing stack bound to the viewport renderer. */
+  post: PostStack | null;
+} = {
   gl: null,
   scene: null,
   camera: null,
+  post: null,
 };
 
 export function setInvalidate(fn: () => void): void {

@@ -4,11 +4,12 @@ import { Inspector } from '../features/inspector/Inspector.tsx';
 import { ProjectsDialog } from '../features/projects/ProjectsDialog.tsx';
 import { ShortcutsDialog } from '../features/shortcuts/ShortcutsDialog.tsx';
 import { pickFiles } from '../lib/files.ts';
-import { createHotkeys, installHotkeys } from '../lib/hotkeys.ts';
+import { createHotkeys, installHotkeys, isEditable } from '../lib/hotkeys.ts';
 import { LeftPanel } from '../panels/LeftPanel.tsx';
 import { TopBar } from '../panels/TopBar.tsx';
 import { exportGalbeFile } from '../persistence/galbeFiles.ts';
 import { useDocumentStore } from '../state/documentStore.ts';
+import { addShapeFromSvg } from '../state/objectActions.ts';
 import { notify } from '../state/toastStore.ts';
 import { useUiStore } from '../state/uiStore.ts';
 import { Viewport } from '../viewport/Viewport.tsx';
@@ -29,6 +30,26 @@ export function App() {
   const [dragging, setDragging] = useState(false);
 
   useEffect(() => installHotkeys(hotkeys), [hotkeys]);
+
+  // Paste SVG markup (Figma "Copy as SVG", Illustrator) or files from the clipboard.
+  useEffect(() => {
+    const onPaste = (event: ClipboardEvent) => {
+      if (isEditable(event.target) || useUiStore.getState().dialog) return;
+      const files = [...(event.clipboardData?.files ?? [])];
+      const text = event.clipboardData?.getData('text/plain') ?? '';
+      if (files.length) {
+        event.preventDefault();
+        void handleFiles(files);
+      } else if (/<svg[\s>]/i.test(text)) {
+        event.preventDefault();
+        addShapeFromSvg(text).catch((error: unknown) =>
+          notify(error instanceof Error ? error.message : 'Could not paste this SVG.', 'error'),
+        );
+      }
+    };
+    window.addEventListener('paste', onPaste);
+    return () => window.removeEventListener('paste', onPaste);
+  }, []);
 
   useEffect(() => {
     let depth = 0;
@@ -79,8 +100,10 @@ export function App() {
       {dragging && (
         <div className={styles.drop}>
           <div>
-            Drop a <strong>.galbe</strong> project, a <strong>font</strong> (TTF, OTF, WOFF) or an{' '}
-            <strong>.hdr</strong> environment
+            Drop a <strong>.galbe</strong> project, an <strong>SVG</strong>, a{' '}
+            <strong>3D model</strong> (GLB, GLTF, FBX, OBJ), a <strong>font</strong>, an{' '}
+            <strong>.hdr</strong> environment, <strong>textures</strong> (images or a zipped PBR
+            set) or a <strong>.cube</strong> LUT
           </div>
         </div>
       )}

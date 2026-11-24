@@ -1,15 +1,16 @@
 import { BUILTIN_HDRIS } from '@galbe/assets';
-import { builtinUri, FRAME_PRESETS, parseAssetUri, TONE_MAPPINGS } from '@galbe/core';
+import { builtinUri, FRAME_PRESETS, type Light, parseAssetUri, TONE_MAPPINGS } from '@galbe/core';
 import { focalLengthToFov, fovToFocalLength } from '@galbe/engine';
-import { Ban, Focus, ImageUp, RotateCcw } from 'lucide-react';
+import { Ban, Eye, EyeOff, Focus, ImageUp, RotateCcw, Trash2 } from 'lucide-react';
 import { BUILTIN_BASE_URL } from '../../engine/studioEngine.ts';
 import { pickFiles } from '../../lib/files.ts';
 import { frameSelection, resetCamera, setFramePreset } from '../../state/actions.ts';
 import { documentApi, useDocumentStore } from '../../state/documentStore.ts';
+import { addLight, removeLight, updateLight } from '../../state/objectActions.ts';
 import { notify } from '../../state/toastStore.ts';
-import { Button, Field, Segmented, Select, Toggle } from '../../ui/controls.tsx';
+import { Button, Field, IconButton, Segmented, Select, Toggle } from '../../ui/controls.tsx';
 import { Section } from '../../ui/Section.tsx';
-import { ColorField, NumberField } from '../inspector/fields.tsx';
+import { ColorField, NumberField, VectorField } from '../inspector/fields.tsx';
 import { HDRI_ACCEPT, importHdriFile } from './importHdri.ts';
 import styles from './SceneInspector.module.css';
 
@@ -29,7 +30,9 @@ export function SceneInspector() {
       <FormatSection />
       <BackgroundSection />
       <EnvironmentSection />
+      <LightsSection />
       <GroundSection />
+      <ReflectionSection />
       <CameraSection />
       <RenderSection />
     </>
@@ -281,6 +284,27 @@ function EnvironmentSection() {
           })
         }
       />
+      {environment.hdri?.startsWith('builtin:') && (
+        <Field
+          label="Quality"
+          hint="Sharper reflections for large exports (downloaded once from Poly Haven, CC0)"
+        >
+          <Segmented
+            label="HDRI resolution"
+            value={environment.resolution}
+            onChange={(resolution) =>
+              set('Environment quality', (draft) => {
+                draft.environment.resolution = resolution;
+              })
+            }
+            options={[
+              { value: '1k', label: '1K', title: 'Bundled, instant' },
+              { value: '2k', label: '2K', title: 'Downloads ~6 MB' },
+              { value: '4k', label: '4K', title: 'Downloads ~25 MB' },
+            ]}
+          />
+        </Field>
+      )}
     </Section>
   );
 }
@@ -448,5 +472,237 @@ function RenderSection() {
         }
       />
     </Section>
+  );
+}
+
+function ReflectionSection() {
+  const reflection = useDocumentStore((state) => state.doc.ground.reflection);
+  return (
+    <Section
+      id="reflection"
+      title="Reflective floor"
+      defaultOpen={false}
+      actions={
+        <Toggle
+          label="Reflective floor"
+          hideLabel
+          checked={reflection.enabled}
+          onChange={(enabled) =>
+            set('Reflective floor', (draft) => {
+              draft.ground.reflection.enabled = enabled;
+            })
+          }
+        />
+      }
+    >
+      {reflection.enabled ? (
+        <>
+          <NumberField
+            label="Strength"
+            value={reflection.strength}
+            min={0}
+            max={1}
+            defaultValue={0.5}
+            onChange={(value) =>
+              set('Reflection strength', (draft) => {
+                draft.ground.reflection.strength = value;
+              })
+            }
+          />
+          <NumberField
+            label="Blur"
+            value={reflection.blur}
+            min={0}
+            max={1}
+            defaultValue={0.35}
+            onChange={(value) =>
+              set('Reflection blur', (draft) => {
+                draft.ground.reflection.blur = value;
+              })
+            }
+          />
+          <NumberField
+            label="Edge fade"
+            value={reflection.fade}
+            min={0.01}
+            max={5}
+            defaultValue={1.5}
+            onChange={(value) =>
+              set('Reflection fade', (draft) => {
+                draft.ground.reflection.fade = value;
+              })
+            }
+          />
+          <ColorField
+            label="Floor"
+            value={reflection.color}
+            onChange={(value) =>
+              set('Floor colour', (draft) => {
+                draft.ground.reflection.color = value;
+              })
+            }
+          />
+          <NumberField
+            label="Floor opacity"
+            value={reflection.floorOpacity}
+            min={0}
+            max={1}
+            defaultValue={0}
+            onChange={(value) =>
+              set('Floor opacity', (draft) => {
+                draft.ground.reflection.floorOpacity = value;
+              })
+            }
+          />
+        </>
+      ) : (
+        <p className={styles.custom}>A glossy floor that mirrors the content.</p>
+      )}
+    </Section>
+  );
+}
+
+const LIGHT_LABELS: Record<Light['type'], string> = {
+  directional: 'Directional',
+  point: 'Point',
+  spot: 'Spot',
+};
+
+function LightsSection() {
+  const lights = useDocumentStore((state) => state.doc.lights);
+  return (
+    <Section
+      id="lights"
+      title={lights.length ? `Lights (${lights.length})` : 'Lights'}
+      defaultOpen={lights.length > 0}
+      actions={
+        <Select
+          label="Add light"
+          value=""
+          className={styles.addLight}
+          onChange={(event) => {
+            if (event.target.value) addLight(event.target.value as Light['type']);
+          }}
+        >
+          <option value="">+ Add</option>
+          <option value="directional">Directional</option>
+          <option value="point">Point</option>
+          <option value="spot">Spot</option>
+        </Select>
+      }
+    >
+      {!lights.length && (
+        <p className={styles.custom}>
+          Add key, rim or coloured lights on top of the HDRI. They light physical materials.
+        </p>
+      )}
+      {lights.map((light) => (
+        <LightEditor key={light.id} light={light} />
+      ))}
+    </Section>
+  );
+}
+
+function LightEditor({ light }: { light: Light }) {
+  const edit = (label: string, recipe: (draft: Light) => void) =>
+    updateLight(light.id, label, (draft) => recipe(draft as Light));
+  return (
+    <div className={styles.light} data-testid={`light-${light.type}`}>
+      <div className={styles.lightHeader}>
+        <span className={styles.lightSwatch} style={{ background: light.color }} />
+        <span className={styles.lightName}>
+          {light.name} · {LIGHT_LABELS[light.type]}
+        </span>
+        <IconButton
+          size="sm"
+          label={light.visible ? 'Turn off' : 'Turn on'}
+          onClick={() =>
+            edit('Toggle light', (l) => {
+              l.visible = !l.visible;
+            })
+          }
+        >
+          {light.visible ? <Eye /> : <EyeOff />}
+        </IconButton>
+        <IconButton size="sm" label="Remove light" onClick={() => removeLight(light.id)}>
+          <Trash2 />
+        </IconButton>
+      </div>
+      <ColorField
+        label="Colour"
+        value={light.color}
+        onChange={(value) =>
+          edit('Light colour', (l) => {
+            l.color = value;
+          })
+        }
+      />
+      <NumberField
+        label="Intensity"
+        value={light.intensity}
+        min={0}
+        max={1000}
+        softMax={light.type === 'directional' ? 10 : 50}
+        defaultValue={2}
+        onChange={(value) =>
+          edit('Light intensity', (l) => {
+            l.intensity = value;
+          })
+        }
+      />
+      <VectorField
+        label="Position"
+        value={light.position}
+        step={0.05}
+        onChange={(value) =>
+          edit('Light position', (l) => {
+            l.position = value;
+          })
+        }
+      />
+      {light.type !== 'point' && (
+        <VectorField
+          label="Aim at"
+          value={light.target}
+          step={0.05}
+          onChange={(value) =>
+            edit('Light target', (l) => {
+              if (l.type !== 'point') l.target = value;
+            })
+          }
+        />
+      )}
+      {light.type === 'spot' && (
+        <>
+          <NumberField
+            label="Cone"
+            value={light.angle}
+            min={1}
+            max={89}
+            step={1}
+            precision={0}
+            unit="°"
+            defaultValue={30}
+            onChange={(value) =>
+              edit('Spot angle', (l) => {
+                if (l.type === 'spot') l.angle = value;
+              })
+            }
+          />
+          <NumberField
+            label="Softness"
+            value={light.penumbra}
+            min={0}
+            max={1}
+            defaultValue={0.5}
+            onChange={(value) =>
+              edit('Spot softness', (l) => {
+                if (l.type === 'spot') l.penumbra = value;
+              })
+            }
+          />
+        </>
+      )}
+    </div>
   );
 }

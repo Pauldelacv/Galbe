@@ -39,6 +39,8 @@ export interface DocumentState {
   end: () => void;
   undo: () => void;
   redo: () => void;
+  /** Moves through history: negative = undo that many steps, positive = redo. */
+  step: (delta: number) => void;
 }
 
 const pushPast = (past: HistoryEntry[], entry: HistoryEntry) => [
@@ -126,6 +128,13 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
       lastCoalesce: null,
       revision: state.revision + 1,
     });
+  },
+
+  step: (delta) => {
+    for (let i = 0; i < Math.abs(delta); i++) {
+      if (delta < 0) get().undo();
+      else get().redo();
+    }
   },
 
   redo: () => {

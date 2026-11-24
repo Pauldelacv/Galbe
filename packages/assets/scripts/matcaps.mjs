@@ -238,7 +238,7 @@ const MATCAPS = [
   {
     id: 'gloss-black',
     name: 'Glossy black',
-    shade: ((g) => (n, r, f) => {
+    shade: ((g) => (_n, r, f) => {
       const c = g(...r);
       const k = 0.06 + f * 0.9;
       return [c[0] * k + 0.004, c[1] * k + 0.004, c[2] * k + 0.005];

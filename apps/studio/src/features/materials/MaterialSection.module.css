@@ -55,3 +55,139 @@
   flex-direction: column;
   gap: var(--g-space-2);
 }
+
+.typeRow {
+  margin-bottom: var(--g-space-4);
+}
+
+.subheading {
+  margin: var(--g-space-2) 0 var(--g-space-3);
+  color: var(--g-text-faint);
+  font-size: var(--g-text-xs);
+  font-weight: var(--g-weight-bold);
+  letter-spacing: var(--g-tracking-caps);
+  text-transform: uppercase;
+}
+
+.note {
+  margin: 0 0 var(--g-space-3);
+  color: var(--g-text-muted);
+  font-size: var(--g-text-xs);
+  line-height: 1.45;
+}
+
+.note a {
+  color: var(--g-accent-hover);
+}
+
+img.swatch {
+  object-fit: cover;
+}
+
+.swatch[data-import] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--g-bg-control);
+  color: var(--g-text-muted);
+}
+
+.swatch[data-import] svg {
+  width: 16px;
+  height: 16px;
+}
+
+.libraryItem {
+  position: relative;
+}
+
+.libraryItem .preset {
+  width: 100%;
+}
+
+.remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--g-bg-control-active);
+  color: var(--g-text);
+}
+
+.remove svg {
+  width: 10px;
+  height: 10px;
+}
+
+.libraryItem:hover .remove {
+  display: inline-flex;
+}
+
+.slots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--g-space-2);
+  margin-bottom: var(--g-space-4);
+}
+
+.slot {
+  display: flex;
+  align-items: center;
+  gap: var(--g-space-3);
+  height: 30px;
+  padding: 0 var(--g-space-2);
+  border-radius: var(--g-radius-sm);
+  background: var(--g-bg-control);
+}
+
+.thumb {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  object-fit: cover;
+  background: var(--g-bg-control-active);
+}
+
+.thumb[data-empty] {
+  background: repeating-linear-gradient(45deg, var(--g-gray-4) 0 3px, var(--g-gray-3) 3px 6px);
+}
+
+.slotName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--g-text-sm);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.slotAction {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: none;
+  color: var(--g-text-muted);
+}
+
+.slotAction:hover {
+  background: var(--g-bg-control-hover);
+  color: var(--g-text-strong);
+}
+
+.slotAction svg {
+  width: 13px;
+  height: 13px;
+}

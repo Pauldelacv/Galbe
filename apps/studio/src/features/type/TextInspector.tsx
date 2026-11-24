@@ -1,12 +1,12 @@
 import { getBuiltinFontFamily } from '@galbe/assets';
-import type { TextNode } from '@galbe/core';
+import type { ShapeNode, TextNode } from '@galbe/core';
 import { AlignCenter, AlignLeft, AlignRight, Type } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { useUiStore } from '../../state/uiStore.ts';
 import { Button, Field, Segmented, Select, Toggle } from '../../ui/controls.tsx';
 import { Section } from '../../ui/Section.tsx';
 import { builtinFontRef, FontPicker } from '../fonts/FontPicker.tsx';
-import { updateText } from '../inspector/edit.ts';
+import { updateDeformable, updateText } from '../inspector/edit.ts';
 import { NumberField } from '../inspector/fields.tsx';
 import styles from './TextInspector.module.css';
 
@@ -175,7 +175,7 @@ function TextSection({ node }: { node: TextNode }) {
   );
 }
 
-function ExtrusionSection({ node }: { node: TextNode }) {
+export function ExtrusionSection({ node }: { node: TextNode | ShapeNode }) {
   const { bevel } = node;
   return (
     <Section id="extrusion" title="Extrusion">
@@ -189,7 +189,7 @@ function ExtrusionSection({ node }: { node: TextNode }) {
         step={0.01}
         defaultValue={0.3}
         onChange={(value) =>
-          updateText(node.id, 'Depth', (draft) => {
+          updateDeformable(node.id, 'Depth', (draft) => {
             draft.depth = value;
           })
         }
@@ -205,7 +205,7 @@ function ExtrusionSection({ node }: { node: TextNode }) {
         defaultValue={8}
         title="Curve segments per outline segment"
         onChange={(value) =>
-          updateText(node.id, 'Smoothness', (draft) => {
+          updateDeformable(node.id, 'Smoothness', (draft) => {
             draft.curveSegments = Math.round(value);
           })
         }
@@ -215,7 +215,7 @@ function ExtrusionSection({ node }: { node: TextNode }) {
           label="Bevel"
           checked={bevel.enabled}
           onChange={(enabled) =>
-            updateText(node.id, 'Bevel', (draft) => {
+            updateDeformable(node.id, 'Bevel', (draft) => {
               draft.bevel.enabled = enabled;
             })
           }
@@ -233,7 +233,7 @@ function ExtrusionSection({ node }: { node: TextNode }) {
             precision={3}
             defaultValue={0.02}
             onChange={(value) =>
-              updateText(node.id, 'Bevel size', (draft) => {
+              updateDeformable(node.id, 'Bevel size', (draft) => {
                 draft.bevel.size = value;
               })
             }
@@ -248,7 +248,7 @@ function ExtrusionSection({ node }: { node: TextNode }) {
             precision={3}
             defaultValue={0.03}
             onChange={(value) =>
-              updateText(node.id, 'Bevel depth', (draft) => {
+              updateDeformable(node.id, 'Bevel depth', (draft) => {
                 draft.bevel.thickness = value;
               })
             }
@@ -263,7 +263,7 @@ function ExtrusionSection({ node }: { node: TextNode }) {
             precision={0}
             defaultValue={4}
             onChange={(value) =>
-              updateText(node.id, 'Bevel segments', (draft) => {
+              updateDeformable(node.id, 'Bevel segments', (draft) => {
                 draft.bevel.segments = Math.round(value);
               })
             }
@@ -274,7 +274,7 @@ function ExtrusionSection({ node }: { node: TextNode }) {
   );
 }
 
-function DeformSection({ node }: { node: TextNode }) {
+export function DeformSection({ node }: { node: TextNode | ShapeNode }) {
   const { bend, twist, wave } = node.deform;
   return (
     <Section id="deform" title="Deform">
@@ -283,7 +283,7 @@ function DeformSection({ node }: { node: TextNode }) {
           label="Bend"
           checked={bend.enabled}
           onChange={(enabled) =>
-            updateText(node.id, 'Bend', (draft) => {
+            updateDeformable(node.id, 'Bend', (draft) => {
               draft.deform.bend.enabled = enabled;
             })
           }
@@ -293,7 +293,7 @@ function DeformSection({ node }: { node: TextNode }) {
             label="Bend mode"
             value={bend.mode}
             onChange={(mode) =>
-              updateText(node.id, 'Bend mode', (draft) => {
+              updateDeformable(node.id, 'Bend mode', (draft) => {
                 draft.deform.bend.mode = mode;
               })
             }
@@ -315,7 +315,7 @@ function DeformSection({ node }: { node: TextNode }) {
           unit="°"
           defaultValue={60}
           onChange={(value) =>
-            updateText(node.id, 'Bend angle', (draft) => {
+            updateDeformable(node.id, 'Bend angle', (draft) => {
               draft.deform.bend.angle = value;
             })
           }
@@ -326,7 +326,7 @@ function DeformSection({ node }: { node: TextNode }) {
           label="Twist"
           checked={twist.enabled}
           onChange={(enabled) =>
-            updateText(node.id, 'Twist', (draft) => {
+            updateDeformable(node.id, 'Twist', (draft) => {
               draft.deform.twist.enabled = enabled;
             })
           }
@@ -345,7 +345,7 @@ function DeformSection({ node }: { node: TextNode }) {
           unit="°"
           defaultValue={90}
           onChange={(value) =>
-            updateText(node.id, 'Twist angle', (draft) => {
+            updateDeformable(node.id, 'Twist angle', (draft) => {
               draft.deform.twist.angle = value;
             })
           }
@@ -356,7 +356,7 @@ function DeformSection({ node }: { node: TextNode }) {
           label="Wave"
           checked={wave.enabled}
           onChange={(enabled) =>
-            updateText(node.id, 'Wave', (draft) => {
+            updateDeformable(node.id, 'Wave', (draft) => {
               draft.deform.wave.enabled = enabled;
             })
           }
@@ -366,7 +366,7 @@ function DeformSection({ node }: { node: TextNode }) {
             label="Wave axis"
             value={wave.axis}
             onChange={(axis) =>
-              updateText(node.id, 'Wave axis', (draft) => {
+              updateDeformable(node.id, 'Wave axis', (draft) => {
                 draft.deform.wave.axis = axis;
               })
             }
@@ -388,7 +388,7 @@ function DeformSection({ node }: { node: TextNode }) {
             step={0.01}
             defaultValue={0.15}
             onChange={(value) =>
-              updateText(node.id, 'Wave amplitude', (draft) => {
+              updateDeformable(node.id, 'Wave amplitude', (draft) => {
                 draft.deform.wave.amplitude = value;
               })
             }
@@ -402,7 +402,7 @@ function DeformSection({ node }: { node: TextNode }) {
             step={0.05}
             defaultValue={1}
             onChange={(value) =>
-              updateText(node.id, 'Wave frequency', (draft) => {
+              updateDeformable(node.id, 'Wave frequency', (draft) => {
                 draft.deform.wave.frequency = value;
               })
             }
@@ -417,7 +417,7 @@ function DeformSection({ node }: { node: TextNode }) {
             unit="°"
             defaultValue={0}
             onChange={(value) =>
-              updateText(node.id, 'Wave phase', (draft) => {
+              updateDeformable(node.id, 'Wave phase', (draft) => {
                 draft.deform.wave.phase = value;
               })
             }
