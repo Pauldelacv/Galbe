@@ -17,6 +17,7 @@ import {
 } from '@galbe/core';
 import type { Draft } from 'immer';
 import { Diamond, Power, Trash2 } from 'lucide-react';
+import { useMemo } from 'react';
 import { documentApi, useDocumentStore } from '../../state/documentStore.ts';
 import { keyTime, usePlaybackStore } from '../../state/playbackStore.ts';
 import { notify } from '../../state/toastStore.ts';
@@ -52,6 +53,8 @@ export function addMotion(type: MotionType, nodeId?: string): void {
         draft.materials[target.id] = target;
         input.toMaterialId = target.id;
       }
+      // Entrances read best quick, then hold.
+      if (type === 'reveal') input.end = Math.min(draft.animation.duration, 1.5);
       draft.animation.motions.push(createMotion(type, input));
     },
     { label: `Add ${MOTION_LABELS[type].toLowerCase()}`, animate: false },
@@ -111,8 +114,10 @@ function AddMotion({ types, nodeId }: { types: readonly MotionType[]; nodeId?: s
 
 /** Motion presets of a layer (Layer tab). */
 export function MotionSection({ node }: { node: SceneNode }) {
-  const motions = useDocumentStore((state) =>
-    state.doc.animation.motions.filter((motion) => 'nodeId' in motion && motion.nodeId === node.id),
+  const all = useDocumentStore((state) => state.doc.animation.motions);
+  const motions = useMemo(
+    () => all.filter((motion) => 'nodeId' in motion && motion.nodeId === node.id),
+    [all, node.id],
   );
   const types = NODE_MOTION_TYPES.filter(
     (type) => type !== 'materialTransition' || isMeshNode(node),
@@ -141,9 +146,8 @@ export function MotionSection({ node }: { node: SceneNode }) {
 
 /** Camera moves (Scene tab). */
 export function CameraMotionSection() {
-  const motions = useDocumentStore((state) =>
-    state.doc.animation.motions.filter((motion) => !('nodeId' in motion)),
-  );
+  const all = useDocumentStore((state) => state.doc.animation.motions);
+  const motions = useMemo(() => all.filter((motion) => !('nodeId' in motion)), [all]);
   return (
     <Section id="camera-motion" title="Camera motion">
       <AddMotion types={CAMERA_MOTION_TYPES} />

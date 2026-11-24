@@ -35,7 +35,7 @@ import {
   EnvironmentController,
   type HdriVariantResolver,
 } from '../environment/EnvironmentController.ts';
-import { FontLibrary } from '../fonts/FontLibrary.ts';
+import { FontLibrary, fontRefKey } from '../fonts/FontLibrary.ts';
 import { buildPrimitiveGeometry, primitiveBuildKey } from '../geometry/primitives.ts';
 import { ReflectiveGround } from '../ground/ReflectiveGround.ts';
 import { MaterialLibrary } from '../materials/MaterialLibrary.ts';
@@ -45,6 +45,7 @@ import { cloneModel, ModelLibrary } from '../models/ModelLibrary.ts';
 import { CONTACT_SHADOW_LAYER, ContactShadows } from '../shadows/ContactShadows.ts';
 import { buildShapeSoups, shapeBuildKey } from '../shapes/buildShapeGeometry.ts';
 import { buildTextSoup, soupToGeometry, textBuildKey } from '../text/buildTextGeometry.ts';
+import type { GeometryWorkerClient } from '../worker/GeometryWorkerClient.ts';
 import { LightsController } from './LightsController.ts';
 
 const DEG = Math.PI / 180;
@@ -87,6 +88,8 @@ export interface SceneControllerOptions {
   onChange?: () => void;
   /** Provides 2K/4K versions of builtin HDRIs (see `Environment.resolution`). */
   hdriVariants?: HdriVariantResolver;
+  /** Builds text and shape geometry off the main thread (falls back when it fails). */
+  geometry?: GeometryWorkerClient;
 }
 
 export interface SceneStatus {
@@ -126,10 +129,14 @@ export class SceneController {
   /** Base document whose (un-animated) content placed the ground. */
   private groundSource: { nodes: unknown; ground: unknown; materials: unknown } | null = null;
   private lastEvaluated: EvaluatedScene | null = null;
+  /** Last `syncAt` call, so async loads re-apply animation too. */
+  private lastFrame: { doc: GalbeDocument; time: number } | null = null;
+  private readonly geometry: GeometryWorkerClient | null;
 
   constructor(options: SceneControllerOptions) {
     this.fonts = options.fonts ?? new FontLibrary(options.assets);
     this.onChange = options.onChange ?? (() => {});
+    this.geometry = options.geometry ?? null;
     this.textures = new TextureLibrary(options.assets, () => {
       if (this.doc) {
         this.materials.sync(this.doc.materials, true);
@@ -195,9 +202,10 @@ export class SceneController {
    * syncs the result, applies per-letter motion and moves video clips. Deterministic.
    */
   syncAt(doc: GalbeDocument, t: number): EvaluatedScene {
+    this.lastFrame = { doc, time: t };
     if (!isAnimated(doc)) {
       this.groundSource = null;
-      this.sync(doc);
+      this.sync(doc, { frame: true });
       this.applyParts({});
       this.videos.setTime(t);
       this.lastEvaluated = { doc, parts: {}, time: t };
@@ -213,10 +221,10 @@ export class SceneController {
       source.ground !== doc.ground ||
       source.materials !== doc.materials
     ) {
-      this.sync(doc);
+      this.sync(doc, { frame: true });
       this.groundSource = { nodes: doc.nodes, ground: doc.ground, materials: doc.materials };
     }
-    this.sync(evaluated.doc, { placeGround: false });
+    this.sync(evaluated.doc, { placeGround: false, frame: true });
     this.applyParts(evaluated.parts);
     this.contactShadows.invalidate();
     this.videos.setTime(t);
@@ -234,7 +242,11 @@ export class SceneController {
     this.videos.setPlaying(playing);
   }
 
-  sync(doc: GalbeDocument, { placeGround = true }: { placeGround?: boolean } = {}): void {
+  sync(
+    doc: GalbeDocument,
+    { placeGround = true, frame = false }: { placeGround?: boolean; frame?: boolean } = {},
+  ): void {
+    if (!frame) this.lastFrame = null;
     const previous = this.doc;
     this.doc = doc;
     this.videoUris = new Set(
@@ -354,7 +366,8 @@ export class SceneController {
           partQuaternion.setFromEuler(partEuler);
           partCenter.set(centers[g * 3]!, centers[g * 3 + 1]!, centers[g * 3 + 2]!);
           partOffset.set(...transform.offset).add(partCenter);
-          partScale.setScalar(Math.max(transform.scale, 1e-5));
+          // Scale 0 collapses the glyph to a point: its triangles have no area and never draw.
+          partScale.setScalar(Math.max(transform.scale, 0));
           const matrix = new Matrix4().compose(partOffset, partQuaternion, partScale);
           matrix.multiply(shiftMatrix.makeTranslation(-partCenter.x, -partCenter.y, -partCenter.z));
           matrices.push(matrix);
@@ -379,7 +392,7 @@ export class SceneController {
         // Bounds stay those of the rest pose, so the ground and framing do not jitter.
         entry.mesh.frustumCulled = false;
       } else if (entry.node.type === 'shape' && entry.parts) {
-        const meshes = [...entry.parts.values()].filter((mesh) => mesh.visible !== false);
+        const meshes = [...entry.parts.values()];
         const count = meshes.length;
         meshes.forEach((mesh, index) => {
           const transform = partTransform(motions, index, count);
@@ -393,7 +406,9 @@ export class SceneController {
           );
           partQuaternion.setFromEuler(partEuler);
           partOffset.set(...transform.offset).add(partCenter);
-          partScale.setScalar(Math.max(transform.scale, 1e-5));
+          // A fully hidden path is not drawn (a zero-scale matrix has no normal matrix).
+          mesh.visible = transform.scale > 1e-4;
+          partScale.setScalar(Math.max(transform.scale, 1e-4));
           partMatrix.compose(partOffset, partQuaternion, partScale);
           partMatrix.multiply(
             shiftMatrix.makeTranslation(-partCenter.x, -partCenter.y, -partCenter.z),
@@ -421,6 +436,7 @@ export class SceneController {
       entry.mesh.frustumCulled = true;
     }
     for (const mesh of entry.parts?.values() ?? []) {
+      mesh.visible = true;
       mesh.matrixAutoUpdate = true;
       mesh.matrix.identity();
       mesh.updateMatrix();
@@ -439,7 +455,12 @@ export class SceneController {
 
   /** Re-applies the last document (after an async load). */
   resync(): void {
-    if (this.doc) {
+    if (this.lastFrame) {
+      const { doc, time } = this.lastFrame;
+      this.doc = null;
+      this.groundSource = null;
+      this.syncAt(doc, time);
+    } else if (this.doc) {
       const doc = this.doc;
       this.doc = null;
       this.sync(doc);
@@ -506,7 +527,57 @@ export class SceneController {
     object.visible = node.visible && isEffectivelyVisible(doc, node.id);
   }
 
+  private get worker(): GeometryWorkerClient | null {
+    return this.geometry && !this.geometry.broken ? this.geometry : null;
+  }
+
+  /** Text built in the worker: the previous geometry stays until the new one arrives. */
+  private updateTextAsync(entry: NodeEntry, node: TextNode, worker: GeometryWorkerClient): void {
+    const key = textBuildKey({ key: fontRefKey(node.font), fonts: [] }, node);
+    this.ensureMesh(entry);
+    if (key === entry.buildKey) return;
+    entry.buildKey = key;
+    const {
+      text,
+      font,
+      size,
+      depth,
+      curveSegments,
+      bevel,
+      letterSpacing,
+      lineHeight,
+      align,
+      deform,
+    } = node;
+    this.track(
+      worker
+        .buildText({ text, font, size, depth, curveSegments, bevel, letterSpacing, lineHeight, align, deform })
+        .then(
+          ({ soup, glyphCount }) => {
+            if (entry.buildKey !== key || !entry.mesh) return;
+            entry.mesh.geometry.dispose();
+            entry.mesh.geometry = soupToGeometry(soup);
+            entry.rest = restPose(soup.position, soup.normal, soup.part, glyphCount);
+            entry.partsApplied = false;
+            this.status.errors.delete(node.id);
+          },
+          (error: unknown) => {
+            if (entry.buildKey !== key) return;
+            // Retry on the main thread if the worker itself died.
+            if (worker.broken) entry.buildKey = undefined;
+            else this.status.errors.set(node.id, error instanceof Error ? error.message : String(error));
+          },
+        ),
+    );
+  }
+
   private updateText(entry: NodeEntry, node: TextNode): void {
+    const worker = this.worker;
+    if (worker) {
+      this.updateTextAsync(entry, node, worker);
+      this.applyMeshLook(this.ensureMesh(entry), node.materialId, node.castShadow);
+      return;
+    }
     const face = this.fonts.get(node.font);
     if (!face) {
       if (!this.fonts.failed(node.font)) this.track(this.fonts.load(node.font));
@@ -549,24 +620,55 @@ export class SceneController {
     this.applyMeshLook(mesh, node.materialId, node.castShadow);
   }
 
+  private replaceShapeParts(
+    entry: NodeEntry,
+    node: ShapeNode,
+    parts: { pathId: string; soup: import('../geometry/soup.ts').TriangleSoup }[],
+  ): void {
+    entry.parts ??= new Map();
+    for (const mesh of entry.parts.values()) {
+      mesh.geometry.dispose();
+      mesh.removeFromParent();
+    }
+    entry.parts.clear();
+    entry.partsApplied = false;
+    for (const { pathId, soup } of parts) {
+      const mesh = new Mesh(soupToGeometry(soup), this.materials.fallback);
+      mesh.userData.nodeId = node.id;
+      mesh.userData.pathId = pathId;
+      entry.object.add(mesh);
+      entry.parts.set(pathId, mesh);
+    }
+  }
+
   private updateShape(entry: NodeEntry, node: ShapeNode): void {
     const key = shapeBuildKey(node);
     entry.parts ??= new Map();
-    if (key !== entry.buildKey) {
+    const worker = this.worker;
+    if (worker && key !== entry.buildKey) {
       entry.buildKey = key;
-      for (const mesh of entry.parts.values()) {
-        mesh.geometry.dispose();
-        mesh.removeFromParent();
-      }
-      entry.parts.clear();
+      const { paths, viewBox, size, depth, curveSegments, bevel, layerSpacing, deform } = node;
+      this.track(
+        worker
+          .buildShape({ paths, viewBox, size, depth, curveSegments, bevel, layerSpacing, deform })
+          .then(
+            (parts) => {
+              if (entry.buildKey !== key) return;
+              this.replaceShapeParts(entry, node, parts);
+              this.status.errors.delete(node.id);
+            },
+            (error: unknown) => {
+              if (entry.buildKey !== key) return;
+              if (worker.broken) entry.buildKey = undefined;
+              else
+                this.status.errors.set(node.id, error instanceof Error ? error.message : String(error));
+            },
+          ),
+      );
+    } else if (key !== entry.buildKey) {
+      entry.buildKey = key;
       try {
-        for (const { pathId, soup } of buildShapeSoups(node)) {
-          const mesh = new Mesh(soupToGeometry(soup), this.materials.fallback);
-          mesh.userData.nodeId = node.id;
-          mesh.userData.pathId = pathId;
-          entry.object.add(mesh);
-          entry.parts.set(pathId, mesh);
-        }
+        this.replaceShapeParts(entry, node, buildShapeSoups(node));
         this.status.errors.delete(node.id);
       } catch (error) {
         this.status.errors.set(node.id, error instanceof Error ? error.message : String(error));

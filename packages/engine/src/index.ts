@@ -27,3 +27,5 @@ export * from './text/buildTextGeometry.ts';
 export * from './text/glyphGeometry.ts';
 export * from './text/layout.ts';
 export * from './text/outline.ts';
+export * from './worker/GeometryWorkerClient.ts';
+export * from './worker/protocol.ts';
