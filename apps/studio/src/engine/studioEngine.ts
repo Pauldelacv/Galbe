@@ -1,4 +1,9 @@
-import { createUrlAssetSource, type PostStack, SceneController } from '@galbe/engine';
+import {
+  createUrlAssetSource,
+  GeometryWorkerClient,
+  type PostStack,
+  SceneController,
+} from '@galbe/engine';
 import type { Camera, Scene, WebGLRenderer } from 'three';
 import { create } from 'zustand';
 import { resolveHdriVariant } from '../features/environment/hdriVariants.ts';
@@ -41,9 +46,25 @@ export function publishStatus(): void {
   }
 }
 
+function createGeometryWorker(): GeometryWorkerClient | undefined {
+  try {
+    const worker = new Worker(new URL('./geometry.worker.ts', import.meta.url), {
+      type: 'module',
+      name: 'galbe-geometry',
+    });
+    return new GeometryWorkerClient(worker, BUILTIN_BASE_URL);
+  } catch (error) {
+    console.warn('[galbe] no geometry worker; building on the main thread', error);
+    return undefined;
+  }
+}
+
+const geometry = typeof Worker !== 'undefined' ? createGeometryWorker() : undefined;
+
 /** The single engine instance driving the viewport, exports and thumbnails. */
 export const controller = new SceneController({
   assets: assetSource,
+  ...(geometry ? { geometry } : {}),
   hdriVariants: resolveHdriVariant,
   onChange: () => {
     publishStatus();

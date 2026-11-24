@@ -84,8 +84,16 @@ They are original images derived only from CC0 sources and are released as CC0.
 ## Code-generated content
 
 Material presets, frame presets, the built-in LUT looks (computed in
-`packages/engine/src/effects/luts.ts`), the ASCII effect's 5 × 7 glyphs and the starter
-scene are original data written for Galbe and are covered by the project's MIT licence.
+`packages/engine/src/effects/luts.ts`), the ASCII effect's 5 × 7 glyphs, the starter
+scene, the six background gradient presets (`apps/studio/src/features/cover/media.ts`) and
+the motion presets (`packages/core/src/animation/`) are original data written for Galbe and
+are covered by the project's MIT licence.
+
+## Test fixtures
+
+- `apps/studio/e2e/fixtures/clip.webm` — a one-second, 96 × 96 VP9 clip generated with
+  FFmpeg's built-in `testsrc` pattern (`ffmpeg -f lavfi -i testsrc=size=96x96:rate=24 -t 1
+  -c:v libvpx-vp9 clip.webm`). Made for this repository; MIT like the code.
 
 ## Third-party libraries
 
@@ -97,6 +105,7 @@ their code is vendored into this repository. The main ones:
 | three.js, React, React Three Fiber, drei, Zustand, Immer, Zod, opentype.js, fflate | MIT                        |
 | postprocessing (effect composer, bloom, depth of field, tone mapping)              | Zlib                       |
 | idb, lucide-react                                                                  | ISC                        |
+| Mediabunny (MP4 / WebM muxing for video export)                                    | MPL 2.0                    |
 | clipper-lib (polygon boolean operations for glyph outlines)                        | Boost Software License 1.0 |
 
 See each package's `LICENSE` in `node_modules` or on npm for the full texts.

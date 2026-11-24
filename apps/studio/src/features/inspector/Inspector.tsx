@@ -7,10 +7,12 @@ import { groupSelection, ungroupSelection } from '../../state/objectActions.ts';
 import { useUiStore } from '../../state/uiStore.ts';
 import { Button, Segmented } from '../../ui/controls.tsx';
 import { Section } from '../../ui/Section.tsx';
+import { CoverInspector } from '../cover/CoverInspector.tsx';
 import { EffectsPanel } from '../effects/EffectsPanel.tsx';
 import { SceneInspector } from '../environment/SceneInspector.tsx';
 import { MaterialSection } from '../materials/MaterialSection.tsx';
 import { ModelInspector } from '../models/ModelInspector.tsx';
+import { MotionSection } from '../motion/MotionSection.tsx';
 import { PrimitiveInspector } from '../primitives/PrimitiveInspector.tsx';
 import { ShapeInspector } from '../shapes/ShapeInspector.tsx';
 import { TextInspector } from '../type/TextInspector.tsx';
@@ -56,6 +58,7 @@ export function Inspector() {
               title: hasSelection ? 'Selected layer' : 'Select a layer to edit it',
             },
             { value: 'scene', label: 'Scene' },
+            { value: 'cover', label: 'Cover', title: 'Backgrounds, text overlays and guides' },
             {
               value: 'effects',
               label: effectCount ? `Effects · ${effectCount}` : 'Effects',
@@ -67,6 +70,8 @@ export function Inspector() {
       <div className={styles.scroll}>
         {current === 'scene' ? (
           <SceneInspector />
+        ) : current === 'cover' ? (
+          <CoverInspector />
         ) : current === 'effects' ? (
           <EffectsPanel />
         ) : (
@@ -105,6 +110,7 @@ function NodeInspector({ nodes }: { nodes: SceneNode[] }) {
       {nodes.length > 1 && <MultiSection count={nodes.length} />}
       {meshes.length > 0 && <MaterialSection nodes={meshes} />}
       {node && <TransformSection node={node} />}
+      {node && <MotionSection node={node} />}
     </>
   );
 }

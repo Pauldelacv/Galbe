@@ -2,6 +2,8 @@ import { defaultEffectParams, type EffectSpec, EffectSpecSchema } from './effect
 import { createId } from './ids.ts';
 import { DEFAULT_FONT } from './presets/fonts.ts';
 import { DEFAULT_MATERIAL_PRESET_ID, getMaterialPreset } from './presets/materials.ts';
+import { type Motion, MotionSchema } from './schema/animation.ts';
+import { type Overlay, OverlaySchema } from './schema/cover.ts';
 import {
   type GalbeDocument,
   type GalbeDocumentInput,
@@ -14,6 +16,7 @@ import {
   type PhysicalMaterial,
   PhysicalMaterialSchema,
 } from './schema/material.ts';
+import type { FontRef } from './schema/nodes.ts';
 import {
   type GroupNode,
   GroupNodeSchema,
@@ -29,7 +32,7 @@ import {
 } from './schema/nodes.ts';
 import { CURRENT_SCHEMA_VERSION } from './version.ts';
 
-export const GENERATOR = 'galbe@0.2.0';
+export const GENERATOR = 'galbe@0.3.0';
 
 type DeepPartial<T> = T extends readonly unknown[]
   ? T
@@ -129,4 +132,22 @@ export function createStarterDocument(name = 'Untitled'): GalbeDocument {
     materials: { [material.id]: material },
     nodes: [text],
   });
+}
+
+/** A 2D text overlay (Cover tool). */
+export function createOverlay(
+  input: Partial<Omit<Overlay, 'font'>> & { font?: FontRef } = {},
+): Overlay {
+  return OverlaySchema.parse({ font: DEFAULT_FONT, ...input, id: input.id ?? createId() });
+}
+
+/** A preset motion with its defaults. */
+export function createMotion<T extends Motion['type']>(
+  type: T,
+  input: Partial<Extract<Motion, { type: T }>> & Record<string, unknown> = {},
+): Extract<Motion, { type: T }> {
+  return MotionSchema.parse({ ...input, id: input.id ?? createId(), type }) as Extract<
+    Motion,
+    { type: T }
+  >;
 }

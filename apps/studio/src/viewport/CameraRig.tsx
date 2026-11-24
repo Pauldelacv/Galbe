@@ -1,9 +1,11 @@
-import type { Camera as CameraSpec } from '@galbe/core';
+import { baseCameraFor, type Camera as CameraSpec } from '@galbe/core';
 import { OrbitControls } from '@react-three/drei';
 import { useThree } from '@react-three/fiber';
 import { type ComponentRef, useLayoutEffect, useRef } from 'react';
 import type { PerspectiveCamera } from 'three';
+import { useEvaluatedStore } from '../engine/evaluatedStore.ts';
 import { useDocumentStore } from '../state/documentStore.ts';
+import { usePlaybackStore } from '../state/playbackStore.ts';
 import { useUiStore } from '../state/uiStore.ts';
 
 const round4 = (value: number) => Math.round(value * 1e4) / 1e4;
@@ -13,7 +15,10 @@ export function CameraRig() {
   const camera = useThree((state) => state.camera) as PerspectiveCamera;
   const invalidate = useThree((state) => state.invalidate);
   const controls = useRef<ComponentRef<typeof OrbitControls>>(null);
-  const spec = useDocumentStore((state) => state.doc.camera);
+  // The camera as animated at the playhead (falls back to the document's).
+  const baseSpec = useDocumentStore((state) => state.doc.camera);
+  const evaluatedSpec = useEvaluatedStore((state) => state.doc?.camera);
+  const spec = evaluatedSpec ?? baseSpec;
   const committed = useRef<CameraSpec | null>(null);
 
   useLayoutEffect(() => {
@@ -32,18 +37,31 @@ export function CameraRig() {
   const commit = () => {
     const target = controls.current?.target;
     if (!target) return;
+    const { doc } = useDocumentStore.getState();
+    const shown: CameraSpec = {
+      ...doc.camera,
+      position: [camera.position.x, camera.position.y, camera.position.z],
+      target: [target.x, target.y, target.z],
+    };
+    // Camera motions (orbit, dolly…) are added on top of the document camera: store the
+    // camera that, once moved, gives what the user framed.
+    const base = baseCameraFor(doc, shown, usePlaybackStore.getState().time);
     useDocumentStore.getState().update(
       (draft) => {
         draft.camera.position = [
-          round4(camera.position.x),
-          round4(camera.position.y),
-          round4(camera.position.z),
+          round4(base.position[0]),
+          round4(base.position[1]),
+          round4(base.position[2]),
         ];
-        draft.camera.target = [round4(target.x), round4(target.y), round4(target.z)];
+        draft.camera.target = [
+          round4(base.target[0]),
+          round4(base.target[1]),
+          round4(base.target[2]),
+        ];
       },
       { history: false },
     );
-    committed.current = useDocumentStore.getState().doc.camera;
+    committed.current = useEvaluatedStore.getState().doc?.camera ?? null;
   };
 
   return (

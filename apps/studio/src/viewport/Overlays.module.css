@@ -1,0 +1,56 @@
+.canvas {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.handle {
+  position: absolute;
+  border-radius: 2px;
+  outline: 1px dashed rgb(255 255 255 / 0.35);
+  outline-offset: 2px;
+  cursor: move;
+  transform-origin: center;
+  touch-action: none;
+}
+
+.handle:hover,
+.handle[data-active] {
+  outline: 1.5px solid var(--g-accent);
+}
+
+.guides {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.guides * {
+  vector-effect: non-scaling-stroke;
+}
+
+.line {
+  stroke: rgb(0 200 255 / 0.55);
+  stroke-width: 1;
+}
+
+.safe,
+.title {
+  fill: none;
+  stroke: rgb(255 210 0 / 0.6);
+  stroke-width: 1;
+}
+
+.title {
+  stroke-dasharray: 4 4;
+}
+
+.zone {
+  fill: rgb(255 60 60 / 0.12);
+  stroke: rgb(255 60 60 / 0.45);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}

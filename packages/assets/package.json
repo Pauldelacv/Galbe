@@ -1,6 +1,6 @@
 {
   "name": "@galbe/assets",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Galbe's bundled assets (OFL fonts, CC0 HDRIs) and their typed manifest.",
   "license": "MIT",
   "type": "module",

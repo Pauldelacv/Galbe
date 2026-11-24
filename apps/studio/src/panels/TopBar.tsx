@@ -1,4 +1,5 @@
 import {
+  Clapperboard,
   Download,
   FolderOpen,
   HelpCircle,
@@ -12,6 +13,7 @@ import {
 import { MOD } from '../lib/hotkeys.ts';
 import { redo, undo } from '../state/actions.ts';
 import { documentApi, useDocumentStore } from '../state/documentStore.ts';
+import { usePlaybackStore } from '../state/playbackStore.ts';
 import { useUiStore } from '../state/uiStore.ts';
 import { Button, IconButton } from '../ui/controls.tsx';
 import styles from './TopBar.module.css';
@@ -48,6 +50,7 @@ export function TopBar({
   const canUndo = useDocumentStore((state) => state.past.length > 0);
   const canRedo = useDocumentStore((state) => state.future.length > 0);
   const panels = useUiStore((state) => state.panels);
+  const timelineOpen = usePlaybackStore((state) => state.timelineOpen);
   const { togglePanel, openDialog } = useUiStore.getState();
 
   return (
@@ -120,6 +123,14 @@ export function TopBar({
           onClick={() => togglePanel('left')}
         >
           <PanelLeft />
+        </IconButton>
+        <IconButton
+          label="Toggle timeline (L)"
+          active={timelineOpen}
+          onClick={() => usePlaybackStore.getState().toggleTimeline()}
+          data-testid="timeline-button"
+        >
+          <Clapperboard />
         </IconButton>
         <IconButton
           label="Toggle inspector (])"

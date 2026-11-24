@@ -9,6 +9,7 @@ import {
 } from '../state/actions.ts';
 import { useDocumentStore } from '../state/documentStore.ts';
 import { groupSelection, ungroupSelection } from '../state/objectActions.ts';
+import { deleteSelectedKeys, usePlaybackStore } from '../state/playbackStore.ts';
 import { useUiStore } from '../state/uiStore.ts';
 
 export const isMac =
@@ -17,7 +18,7 @@ export const MOD = isMac ? '⌘' : 'Ctrl';
 
 export interface Hotkey {
   id: string;
-  group: 'General' | 'Edit' | 'Viewport' | 'Panels';
+  group: 'General' | 'Edit' | 'Viewport' | 'Panels' | 'Timeline';
   keys: string[];
   description: string;
   match: (event: KeyboardEvent) => boolean;
@@ -31,6 +32,7 @@ const key = (event: KeyboardEvent, value: string) => event.key.toLowerCase() ===
 /** Single source of truth for shortcuts: drives the handler and the cheat sheet. */
 export function createHotkeys(actions: { saveFile: () => void; openFile: () => void }): Hotkey[] {
   const ui = () => useUiStore.getState();
+  const playback = () => usePlaybackStore.getState();
   return [
     {
       id: 'add-text',
@@ -44,7 +46,7 @@ export function createHotkeys(actions: { saveFile: () => void; openFile: () => v
       id: 'export',
       group: 'General',
       keys: [MOD, 'E'],
-      description: 'Export image',
+      description: 'Export image or video',
       match: (e) => mod(e) && !e.shiftKey && key(e, 'e'),
       run: () => ui().openDialog('export'),
     },
@@ -118,7 +120,9 @@ export function createHotkeys(actions: { saveFile: () => void; openFile: () => v
       keys: ['⌫'],
       description: 'Delete selection',
       match: (e) => plain(e) && (e.key === 'Delete' || e.key === 'Backspace'),
-      run: deleteSelection,
+      run: () => {
+        if (!deleteSelectedKeys()) deleteSelection();
+      },
     },
     {
       id: 'select-all',
@@ -189,6 +193,62 @@ export function createHotkeys(actions: { saveFile: () => void; openFile: () => v
       description: 'Toggle tools & layers',
       match: (e) => plain(e) && e.key === '[',
       run: () => ui().togglePanel('left'),
+    },
+    {
+      id: 'play',
+      group: 'Timeline',
+      keys: ['Space'],
+      description: 'Play / pause',
+      match: (e) => plain(e) && !e.shiftKey && e.code === 'Space',
+      run: () => playback().toggle(),
+    },
+    {
+      id: 'previous-frame',
+      group: 'Timeline',
+      keys: [','],
+      description: 'Previous frame (⇧ ten frames)',
+      match: (e) => !e.metaKey && !e.ctrlKey && (e.key === ',' || e.key === '<'),
+      run: () => playback().step(-1),
+    },
+    {
+      id: 'next-frame',
+      group: 'Timeline',
+      keys: ['.'],
+      description: 'Next frame',
+      match: (e) => !e.metaKey && !e.ctrlKey && (e.key === '.' || e.key === '>'),
+      run: () => playback().step(1),
+    },
+    {
+      id: 'go-start',
+      group: 'Timeline',
+      keys: ['Home'],
+      description: 'Go to start',
+      match: (e) => plain(e) && e.key === 'Home',
+      run: () => playback().seek(0),
+    },
+    {
+      id: 'go-end',
+      group: 'Timeline',
+      keys: ['End'],
+      description: 'Go to end',
+      match: (e) => plain(e) && e.key === 'End',
+      run: () => playback().seek(useDocumentStore.getState().doc.animation.duration),
+    },
+    {
+      id: 'auto-key',
+      group: 'Timeline',
+      keys: ['K'],
+      description: 'Auto-key on / off',
+      match: (e) => plain(e) && key(e, 'k'),
+      run: () => playback().setAutoKey(!playback().autoKey),
+    },
+    {
+      id: 'timeline',
+      group: 'Panels',
+      keys: ['L'],
+      description: 'Toggle timeline',
+      match: (e) => plain(e) && key(e, 'l'),
+      run: () => playback().toggleTimeline(),
     },
     {
       id: 'right-panel',

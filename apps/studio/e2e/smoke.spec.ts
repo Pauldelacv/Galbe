@@ -39,7 +39,7 @@ function storedNames(page: Page): Promise<string[]> {
 }
 
 async function canvasCenter(page: Page) {
-  const box = await page.locator('[data-testid=viewport] canvas').boundingBox();
+  const box = await page.locator('[data-testid=viewport-canvas] canvas').boundingBox();
   if (!box) throw new Error('viewport canvas not found');
   return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 }
@@ -58,7 +58,7 @@ test.beforeEach(async ({ page }) => {
 
 test('the studio loads with a starter scene', async ({ page }) => {
   const errors = collectErrors(page);
-  await expect(page.locator('[data-testid=viewport] canvas')).toBeVisible();
+  await expect(page.locator('[data-testid=viewport-canvas] canvas')).toBeVisible();
   await expect(page.getByTestId('layers').getByText('Galbe')).toBeVisible();
   await sceneReady(page);
   await expect(page.getByText('Saved locally')).toBeVisible();
@@ -95,7 +95,7 @@ test('type, style, undo and export a transparent PNG', async ({ page }) => {
   // Transparent background, then export at 2×. (Escape leaves the text field, then deselects.)
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
-  await page.getByRole('radio', { name: 'None' }).click();
+  await page.getByTestId('background-type').selectOption('transparent');
   await page.getByTestId('export-button').click();
   await expect(page.getByTestId('export-size')).toContainText('2160 × 2160');
   const [download] = await Promise.all([

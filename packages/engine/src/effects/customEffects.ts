@@ -1,5 +1,6 @@
 import { BlendFunction, Effect, EffectAttribute } from 'postprocessing';
 import { Color, type Data3DTexture, Uniform, Vector2 } from 'three';
+import { BACKGROUND_GLSL } from '../background/BackgroundLayer.ts';
 
 /*
  * Galbe's own screen-space effects. They work in *full-frame pixel* coordinates
@@ -412,19 +413,36 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
  * Composites a flat background colour under the (premultiplied) image after tone mapping,
  * so colour backgrounds look exactly as without effects (three never tone-maps them).
  */
-export const createBackgroundEffect = () =>
-  new GalbeEffect(
+/**
+ * Lays the background under the rendered image after tone mapping: a flat colour, or the
+ * gradient / media layer (same GLSL as the in-scene mesh, so both paths match).
+ */
+export function createBackgroundEffect(layer?: Record<string, Uniform<unknown>>): GalbeEffect {
+  const effect = new GalbeEffect(
     'GalbeBackground',
     /* glsl */ `
 uniform vec3 background;
 uniform bool enabled;
+uniform bool layered;
+${layer ? BACKGROUND_GLSL : ''}
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-  outputColor = enabled
-    ? vec4(inputColor.rgb + background * (1.0 - inputColor.a), 1.0)
-    : inputColor;
+  vec3 under = background;
+  ${
+    layer
+      ? `if (layered) {
+    vec2 px = uOffset + uv * resolution;
+    under = galbeBackground(vec2(px.x / uFull.x, 1.0 - px.y / uFull.y));
+  }`
+      : ''
+  }
+  outputColor = enabled ? vec4(inputColor.rgb + under * (1.0 - inputColor.a), 1.0) : inputColor;
 }`,
-    { background: new Color(), enabled: false },
+    { background: new Color(), enabled: false, layered: false },
   );
+  // Share the layer's uniform objects, so updating the layer updates the composite.
+  if (layer) for (const [key, uniform] of Object.entries(layer)) effect.uniforms.set(key, uniform);
+  return effect;
+}
 
 /**
  * Replaces NaN/∞ (half-float overflow on very bright speculars) before light-spreading

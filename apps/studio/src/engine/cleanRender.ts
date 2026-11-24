@@ -7,6 +7,7 @@ import { controller, viewport } from './studioEngine.ts';
  */
 export function hideEditorHelpers(scene: Scene): () => void {
   const artwork = new Set<Object3D>([
+    controller.background.mesh,
     controller.content,
     controller.contactShadows.object,
     controller.reflection.object,

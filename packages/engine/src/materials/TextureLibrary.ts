@@ -26,7 +26,12 @@ export class TextureLibrary {
     return this.cache.size - this.ready.size;
   }
 
+  /** Routes some URIs (videos) to another provider; return undefined to load as an image. */
+  external: ((uri: AssetUri) => Texture | null | undefined) | null = null;
+
   get(uri: AssetUri, colorSpace: ColorSpace = SRGBColorSpace): Texture | null {
+    const external = this.external?.(uri);
+    if (external !== undefined) return external;
     const key = `${uri}|${colorSpace}`;
     if (this.ready.has(key)) return this.ready.get(key) ?? null;
     void this.load(uri, colorSpace);

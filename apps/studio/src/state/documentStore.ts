@@ -1,4 +1,4 @@
-import { createStarterDocument, type GalbeDocument } from '@galbe/core';
+import { createStarterDocument, diffAnimatable, type GalbeDocument, keyChanges } from '@galbe/core';
 import { type Draft, produce } from 'immer';
 import { create } from 'zustand';
 
@@ -15,6 +15,33 @@ export interface UpdateOptions {
    * (keyboard nudges, typing in a text field).
    */
   coalesce?: string;
+  /**
+   * false = never turn this edit into keyframes (baking the playhead, structural edits).
+   * By default, edits of animated properties are keyed at the playhead (see `setKeyer`).
+   */
+  animate?: boolean;
+}
+
+/** Turns value edits into keyframes; installed by the playback module. */
+export interface Keyer {
+  time: () => number;
+  autoKey: () => boolean;
+}
+let keyer: Keyer | null = null;
+export const setKeyer = (value: Keyer | null): void => {
+  keyer = value;
+};
+
+function keyEdits(before: GalbeDocument, after: GalbeDocument): GalbeDocument {
+  if (!keyer) return after;
+  const autoKey = keyer.autoKey();
+  if (!autoKey && !after.animation.tracks.length) return after;
+  const changes = diffAnimatable(before, after);
+  if (!changes.length) return after;
+  const time = keyer.time();
+  return produce(after, (draft) => {
+    keyChanges(draft.animation, changes, time, autoKey);
+  });
 }
 
 interface HistoryEntry {
@@ -72,8 +99,9 @@ export const useDocumentStore = create<DocumentState>()((set, get) => ({
 
   update: (recipe, options = {}) => {
     const state = get();
-    const next = produce(state.doc, recipe);
+    let next = produce(state.doc, recipe);
     if (next === state.doc) return;
+    if (options.animate !== false) next = keyEdits(state.doc, next);
     const label = options.label ?? 'Edit';
     if (state.transaction || options.history === false) {
       set({ doc: next, revision: state.revision + 1 });

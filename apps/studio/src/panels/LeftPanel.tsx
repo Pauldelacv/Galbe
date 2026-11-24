@@ -70,6 +70,7 @@ export function LeftPanel() {
   const [flyout, setFlyout] = useState<'primitive' | null>(null);
   const tab = useUiStore((state) => state.leftTab);
   const setTab = useUiStore((state) => state.setLeftTab);
+  const coverOpen = useUiStore((state) => state.inspectorTab === 'cover');
   return (
     <aside className={styles.panel} aria-label="Tools and layers">
       <div className={styles.heading}>Add</div>
@@ -93,7 +94,17 @@ export function LeftPanel() {
           shortcut="GLB, GLTF, FBX or OBJ"
           onClick={() => void importModelFromPicker()}
         />
-        <Tool icon={<Image />} label="Cover" soon="v0.3" />
+        <Tool
+          icon={<Image />}
+          label="Cover"
+          shortcut="backgrounds, text overlays and guides"
+          active={coverOpen}
+          onClick={() => {
+            const ui = useUiStore.getState();
+            ui.setInspectorTab('cover');
+            if (!ui.panels.right) ui.togglePanel('right');
+          }}
+        />
         <Tool
           icon={<Upload />}
           label="Import"

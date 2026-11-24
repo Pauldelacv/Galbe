@@ -3,6 +3,7 @@ import { ExportDialog } from '../features/export/ExportDialog.tsx';
 import { Inspector } from '../features/inspector/Inspector.tsx';
 import { ProjectsDialog } from '../features/projects/ProjectsDialog.tsx';
 import { ShortcutsDialog } from '../features/shortcuts/ShortcutsDialog.tsx';
+import { Timeline } from '../features/timeline/Timeline.tsx';
 import { pickFiles } from '../lib/files.ts';
 import { createHotkeys, installHotkeys, isEditable } from '../lib/hotkeys.ts';
 import { LeftPanel } from '../panels/LeftPanel.tsx';
@@ -10,6 +11,7 @@ import { TopBar } from '../panels/TopBar.tsx';
 import { exportGalbeFile } from '../persistence/galbeFiles.ts';
 import { useDocumentStore } from '../state/documentStore.ts';
 import { addShapeFromSvg } from '../state/objectActions.ts';
+import { usePlaybackStore } from '../state/playbackStore.ts';
 import { notify } from '../state/toastStore.ts';
 import { useUiStore } from '../state/uiStore.ts';
 import { Viewport } from '../viewport/Viewport.tsx';
@@ -26,6 +28,7 @@ const openFile = async () => handleFiles(await pickFiles('.galbe'));
 export function App() {
   const panels = useUiStore((state) => state.panels);
   const dialog = useUiStore((state) => state.dialog);
+  const timelineOpen = usePlaybackStore((state) => state.timelineOpen);
   const hotkeys = useMemo(() => createHotkeys({ saveFile, openFile }), []);
   const [dragging, setDragging] = useState(false);
 
@@ -91,7 +94,10 @@ export function App() {
       <TopBar onSaveFile={saveFile} onOpenFile={openFile} />
       <main className={styles.main}>
         {panels.left && <LeftPanel />}
-        <Viewport />
+        <div className={styles.center}>
+          <Viewport />
+          {timelineOpen && <Timeline />}
+        </div>
         {panels.right && <Inspector />}
       </main>
       {dialog === 'export' && <ExportDialog />}
@@ -103,7 +109,7 @@ export function App() {
             Drop a <strong>.galbe</strong> project, an <strong>SVG</strong>, a{' '}
             <strong>3D model</strong> (GLB, GLTF, FBX, OBJ), a <strong>font</strong>, an{' '}
             <strong>.hdr</strong> environment, <strong>textures</strong> (images or a zipped PBR
-            set) or a <strong>.cube</strong> LUT
+            set), a <strong>video</strong> (background or texture) or a <strong>.cube</strong> LUT
           </div>
         </div>
       )}

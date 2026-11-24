@@ -1,6 +1,6 @@
 {
   "name": "@galbe/exporters",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Galbe exporters: images (v0.1), video (v0.3), GLB/USDZ (v0.4).",
   "license": "MIT",
   "type": "module",
@@ -14,6 +14,8 @@
   },
   "dependencies": {
     "@galbe/core": "workspace:*",
+    "fflate": "0.8.3",
+    "mediabunny": "1.65.1",
     "three": "0.187.0"
   },
   "devDependencies": {

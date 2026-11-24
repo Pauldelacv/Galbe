@@ -10,7 +10,9 @@ import { addLight, removeLight, updateLight } from '../../state/objectActions.ts
 import { notify } from '../../state/toastStore.ts';
 import { Button, Field, IconButton, Segmented, Select, Toggle } from '../../ui/controls.tsx';
 import { Section } from '../../ui/Section.tsx';
+import { BackgroundSection } from '../cover/BackgroundSection.tsx';
 import { ColorField, NumberField, VectorField } from '../inspector/fields.tsx';
+import { CameraMotionSection } from '../motion/MotionSection.tsx';
 import { HDRI_ACCEPT, importHdriFile } from './importHdri.ts';
 import styles from './SceneInspector.module.css';
 
@@ -34,6 +36,7 @@ export function SceneInspector() {
       <GroundSection />
       <ReflectionSection />
       <CameraSection />
+      <CameraMotionSection />
       <RenderSection />
     </>
   );
@@ -109,70 +112,6 @@ function FormatSection() {
             }
           />
         </Field>
-      )}
-    </Section>
-  );
-}
-
-function BackgroundSection() {
-  const background = useDocumentStore((state) => state.doc.background);
-  return (
-    <Section id="background" title="Background">
-      <Segmented
-        label="Background type"
-        value={background.type}
-        onChange={(type) =>
-          set('Background', (draft) => {
-            if (type === 'transparent') draft.background = { type };
-            else if (type === 'color') draft.background = { type, color: '#16161a' };
-            else draft.background = { type, blur: 0.6, intensity: 1 };
-          })
-        }
-        options={[
-          { value: 'transparent', label: 'None', title: 'Transparent (alpha) background' },
-          { value: 'color', label: 'Colour' },
-          { value: 'environment', label: 'HDRI', title: 'Show the environment image' },
-        ]}
-      />
-      {background.type === 'color' && (
-        <ColorField
-          label="Colour"
-          value={background.color}
-          onChange={(value) =>
-            set('Background colour', (draft) => {
-              if (draft.background.type === 'color') draft.background.color = value;
-            })
-          }
-        />
-      )}
-      {background.type === 'environment' && (
-        <>
-          <NumberField
-            label="Blur"
-            value={background.blur}
-            min={0}
-            max={1}
-            defaultValue={0.6}
-            onChange={(value) =>
-              set('Background blur', (draft) => {
-                if (draft.background.type === 'environment') draft.background.blur = value;
-              })
-            }
-          />
-          <NumberField
-            label="Brightness"
-            value={background.intensity}
-            min={0}
-            max={10}
-            softMax={3}
-            defaultValue={1}
-            onChange={(value) =>
-              set('Background brightness', (draft) => {
-                if (draft.background.type === 'environment') draft.background.intensity = value;
-              })
-            }
-          />
-        </>
       )}
     </Section>
   );

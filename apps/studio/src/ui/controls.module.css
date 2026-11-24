@@ -141,6 +141,7 @@
 }
 
 .toggle {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: var(--g-space-4);

@@ -1,7 +1,14 @@
 import { z } from 'zod';
 import { EffectSpecSchema } from '../effects.ts';
 import { CURRENT_SCHEMA_VERSION } from '../version.ts';
+import { AnimationSchema } from './animation.ts';
 import { AssetUriSchema, ColorSchema, unit, Vec3Schema } from './common.ts';
+import {
+  GradientBackgroundSchema,
+  ImageBackgroundSchema,
+  OverlaySchema,
+  VideoBackgroundSchema,
+} from './cover.ts';
 import { MaterialSpecSchema } from './material.ts';
 import { nodeMaterialIds, SceneNodeSchema } from './nodes.ts';
 
@@ -25,7 +32,11 @@ export const BackgroundSchema = z.discriminatedUnion('type', [
     blur: unit().default(0.6),
     intensity: z.number().min(0).max(10).default(1),
   }),
+  GradientBackgroundSchema,
+  ImageBackgroundSchema,
+  VideoBackgroundSchema,
 ]);
+export type BackgroundType = Background['type'];
 export type Background = z.infer<typeof BackgroundSchema>;
 
 export const CameraSchema = z.object({
@@ -167,6 +178,11 @@ export const GalbeDocumentSchema = z
 
     /** Post-processing stack, applied in order (within each stage). */
     effects: z.array(EffectSpecSchema).default([]),
+
+    /** Timeline: keyframe tracks and preset motions (v0.3). */
+    animation: AnimationSchema.prefault({}),
+    /** 2D text layers drawn over the render, top-most last (v0.3, Cover tool). */
+    overlays: z.array(OverlaySchema).max(200).default([]),
   })
   .superRefine((doc, ctx) => {
     const ids = new Set<string>();
@@ -197,6 +213,16 @@ export const GalbeDocumentSchema = z
           });
         }
       }
+    }
+    const overlayIds = new Set<string>();
+    for (const [index, overlay] of doc.overlays.entries()) {
+      if (overlayIds.has(overlay.id) || ids.has(overlay.id))
+        ctx.addIssue({
+          code: 'custom',
+          message: `Duplicate overlay id "${overlay.id}"`,
+          path: ['overlays', index, 'id'],
+        });
+      overlayIds.add(overlay.id);
     }
     for (const [key, material] of Object.entries(doc.materials)) {
       if (material.id !== key) {

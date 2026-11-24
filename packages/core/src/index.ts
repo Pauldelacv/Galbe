@@ -1,3 +1,4 @@
+export * from './animation/index.ts';
 export * from './assets.ts';
 export * from './effects.ts';
 export * from './factories.ts';
@@ -6,7 +7,9 @@ export * from './ids.ts';
 export * from './migrations.ts';
 export * from './ops.ts';
 export * from './presets/index.ts';
+export * from './schema/animation.ts';
 export * from './schema/common.ts';
+export * from './schema/cover.ts';
 export * from './schema/document.ts';
 export * from './schema/material.ts';
 export * from './schema/nodes.ts';
