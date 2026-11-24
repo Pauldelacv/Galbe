@@ -24,7 +24,10 @@ export function serveGeometry(
           if (!fonts) throw new Error('Geometry worker not initialised');
           const face = await fonts.load(request.input.font);
           const { soup, glyphCount } = buildTextSoup(face, request.input);
-          scope.postMessage({ id: request.id, ok: true, kind: 'text', soup, glyphCount }, soupBuffers(soup));
+          scope.postMessage(
+            { id: request.id, ok: true, kind: 'text', soup, glyphCount },
+            soupBuffers(soup),
+          );
         } else {
           const parts = buildShapeSoups(request.input);
           scope.postMessage(

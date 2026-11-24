@@ -116,13 +116,19 @@ describe('geometry worker', () => {
     const toServer: Listener[] = [];
     const toClient: Listener[] = [];
     const worker = {
-      postMessage: (data: unknown) => queueMicrotask(() => toServer.forEach((l) => l({ data }))),
+      postMessage: (data: unknown) =>
+        queueMicrotask(() => {
+          for (const l of toServer) l({ data });
+        }),
       addEventListener: (type: string, listener: Listener) => {
         if (type === 'message') toClient.push(listener);
       },
     };
     const scope = {
-      postMessage: (data: unknown) => queueMicrotask(() => toClient.forEach((l) => l({ data }))),
+      postMessage: (data: unknown) =>
+        queueMicrotask(() => {
+          for (const l of toClient) l({ data });
+        }),
       addEventListener: (_type: string, listener: Listener) => toServer.push(listener),
     };
     return { worker, scope };

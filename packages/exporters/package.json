@@ -1,6 +1,6 @@
 {
   "name": "@galbe/exporters",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Galbe exporters: images (v0.1), video (v0.3), GLB/USDZ (v0.4).",
   "license": "MIT",
   "type": "module",

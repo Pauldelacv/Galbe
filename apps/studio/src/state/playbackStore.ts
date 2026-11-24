@@ -67,17 +67,17 @@ export const usePlaybackStore = create<PlaybackState>()((set, get) => ({
     const time = get().time >= duration - 1e-6 ? 0 : get().time;
     lastTick = performance.now();
     set({ playing: true, time });
-    cancelAnimationFrame(frameRequest);
+    globalThis.cancelAnimationFrame?.(frameRequest);
     frameRequest = requestAnimationFrame(tick);
   },
   pause: () => {
-    cancelAnimationFrame(frameRequest);
+    globalThis.cancelAnimationFrame?.(frameRequest);
     const { fps } = animation();
     set({ playing: false, time: snapTime(get().time, fps) });
   },
   toggle: () => (get().playing ? get().pause() : get().play()),
   seek: (time) => {
-    cancelAnimationFrame(frameRequest);
+    globalThis.cancelAnimationFrame?.(frameRequest);
     const { fps, duration } = animation();
     set({ playing: false, time: Math.max(0, Math.min(duration, snapTime(time, fps))) });
   },

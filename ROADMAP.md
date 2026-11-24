@@ -52,17 +52,21 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ➡️ Video textures — moved to v0.3 (they need the timeline's deterministic time)
 - ➡️ Text/shape geometry in a Web Worker — moved to v0.3 (with per-letter animation)
 
-## v0.3 — Motion & Cover ⬜
+## v0.3 — Motion & Cover ✅
 
-- ⬜ Animation presets: spin, float, swing, wave, letter-by-letter reveal, material transition
-- ⬜ Timeline: keyframes on any numeric/colour property, easing curves, duration, seamless loops
-- ⬜ Animated camera: orbit, truck, dolly
-- ⬜ Video export: deterministic frame stepping, MP4 H.264 (WebCodecs + Mediabunny),
-  WebM VP9 with alpha, PNG sequence fallback
-- ⬜ Cover tool: gradient (linear, radial, mesh), image and video backgrounds, 2D text
-  overlays, safe zones and grid
-- ⬜ Video textures (from v0.2), driven by the timeline's deterministic time
-- ⬜ Text and shape geometry built in a Web Worker (from v0.2), for long texts and
+- ✅ Animation presets: spin, float, swing, wave (per letter), letter-by-letter reveal
+  (6 styles, 5 orders, in / out / in-out), material transition
+- ✅ Timeline: keyframes on any numeric/colour property (layers, materials, camera, lights,
+  environment, effects, backgrounds, overlays), 12 easings + cubic-bezier, duration, fps,
+  seamless loops (whole turns/cycles, ping-pong, "close loop" per track), auto-key
+- ✅ Animated camera: orbit, truck, dolly (orbiting the viewport keeps working: the base
+  camera is solved back through the moves)
+- ✅ Video export: deterministic frame stepping, MP4 H.264 (WebCodecs + Mediabunny),
+  WebM VP9 with alpha, PNG sequence (zip)
+- ✅ Cover tool: gradient (linear, radial, mesh), image and video backgrounds, 2D text
+  overlays, safe zones (with 9:16 app UI zones) and grids (thirds, golden ratio, columns)
+- ✅ Video textures (from v0.2), driven by the timeline's deterministic time
+- ✅ Text and shape geometry built in a Web Worker (from v0.2), for long texts and
   per-letter animation
 
 ## v0.4 — 3D export, embeds & templates ⬜
@@ -81,6 +85,51 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 ---
 
 ## Milestone notes
+
+### v0.3 — 2026-11-24
+
+**Works**
+
+- `evaluateScene(doc, t)` (core) is the single source of motion: keyframe tracks addressed by
+  id-based paths, then preset motions on top. The viewport, the image export (at the
+  playhead) and the video export all call it, so a frame is a pure function of the document
+  and the time.
+- Auto-key: with **K** on, editing any number or colour keys it at the playhead (and keys the
+  previous value at 0, so the edit animates); a property that already has a track is always
+  keyed. The inspector shows the animated values at the playhead.
+- Per-letter motion moves each glyph (or each SVG path) around its own centre; the ground and
+  contact shadow stay where the rest pose puts them.
+- Backgrounds: gradients, images and videos are drawn by one shader in full-frame
+  coordinates, in the scene (glass refracts them, shadows fall on them) or composited after
+  tone mapping when effects are on — tiled exports stay seamless.
+- Video export verified in Chromium: MP4/H.264 and WebM/VP9 with alpha (120 frames, exact
+  4.000 s, decoded back and checked), PNG sequences.
+- Text and shapes build in a Web Worker (fonts read from IndexedDB inside the worker); the
+  previous geometry stays on screen until the new one arrives, and exports wait for it.
+- 175 unit tests (core, engine, exporters, studio) and 11 Playwright tests (5 new: presets
+  and playback, auto-key, Cover with and without effects, video background, PNG-sequence and
+  WebM export).
+
+**Missing / deferred**
+
+- No curve (graph) editor: easings are picked per keyframe; custom cubic-bezier curves exist
+  in the format but have no UI yet.
+- No audio track.
+- Overlays are flat text only (no shapes or images yet), drawn with the browser's 2D text
+  engine.
+
+**Known issues**
+
+- With effects enabled, gradient/image/video backgrounds are composited after tone mapping,
+  so glass does not refract them (it does when no effect is on).
+- Keyframing geometry parameters (bevel, deformation…) rebuilds the mesh every frame: exports
+  are exact, but playback of long texts can lag behind real time.
+- H.264 encoding depends on the browser build (some Chromium builds ship without it); the
+  dialog falls back to WebM or a PNG sequence. Keep the tab visible while a video renders.
+- Videos are stored inside the project (IndexedDB and `.galbe` files), so long clips make
+  big projects.
+- Fixed in passing: hidden toggle inputs overflowed the page, which let focus or
+  `scrollIntoView` scroll the whole studio out of view.
 
 ### v0.2 — 2026-11-24
 

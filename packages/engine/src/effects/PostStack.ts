@@ -322,6 +322,8 @@ export class PostStack {
     for (const slot of this.slots) {
       slot.implementation.update(slot.effect, resolveEffectParams(slot.spec), frame, this.context);
     }
+    // The background composite works in full-frame coordinates too (gradients, media).
+    this.background.setFrame(frame);
     if (camera instanceof PerspectiveCamera) {
       for (const slot of this.slots) {
         if (slot.effect instanceof DepthOfFieldEffect) slot.effect.mainCamera = camera;

@@ -45,9 +45,5 @@ export interface WorkerScopeLike {
   addEventListener(type: 'message', listener: (event: { data: GeometryRequest }) => void): void;
 }
 
-export const soupBuffers = (soup: TriangleSoup): Transferable[] => [
-  soup.position.buffer,
-  soup.normal.buffer,
-  soup.uv.buffer,
-  soup.part.buffer,
-] as ArrayBuffer[];
+export const soupBuffers = (soup: TriangleSoup): Transferable[] =>
+  [soup.position.buffer, soup.normal.buffer, soup.uv.buffer, soup.part.buffer] as ArrayBuffer[];

@@ -26,7 +26,7 @@ layout of the repository. It is meant to be read before contributing code.
    providers chosen by the user with their own key).
 4. **Deterministic by construction.** Scene evaluation is a pure function of
    `(document, time)`. No `Date.now()`, no unseeded randomness. This is what makes
-   frame-by-frame video export (v0.3) exact and reproducible.
+   frame-by-frame video export exact and reproducible.
 5. **Designer-grade ergonomics.** Precise sliders, keyboard shortcuts, drag & drop,
    60 fps target with automatic quality reduction while manipulating.
 6. **Easy to extend.** Materials, post effects, templates and AI providers are
@@ -55,7 +55,7 @@ galbe/
 │   ├── core/                   @galbe/core — schema, migrations, ops, presets, .galbe format
 │   ├── assets/                 @galbe/assets — bundled CC0/OFL fonts & HDRIs + manifest
 │   ├── engine/                 @galbe/engine — three.js runtime shared by every host
-│   ├── exporters/              @galbe/exporters — image (v0.1), video (v0.3), GLB/USDZ (v0.4)
+│   ├── exporters/              @galbe/exporters — image, overlays, video (v0.3), GLB/USDZ (v0.4)
 │   ├── player/                 @galbe/player — <galbe-scene> web component (v0.4)
 │   └── ai/                     @galbe/ai — provider-agnostic AI module (v0.5)
 ├── templates/                  Bundled .galbe templates (v0.4)
@@ -122,10 +122,14 @@ GalbeDocument {
     preset: '1:1' | '4:5' | '9:16' | '16:9' | 'a4' | 'custom'
     width: number; height: number       // base pixels; export multiplies this
   }
-  background:                           // v0.1; Cover (v0.3) adds gradient/image/video
+  background:
     | { type: 'transparent' }
     | { type: 'color'; color }
     | { type: 'environment'; blur; intensity }
+    | { type: 'gradient'; kind: 'linear'|'radial'|'mesh'; stops; angle; center; radius;
+        points; softness; noise }                                  // v0.3 (Cover)
+    | { type: 'image'; image; fit: 'cover'|'contain'|'stretch'; scale; offset; color; brightness }
+    | { type: 'video'; video; fit; …; startAt; speed; loop }
   camera: { fov; position: Vec3; target: Vec3; near; far }
   environment: { hdri: AssetUri | null; intensity; rotation; resolution: '1k'|'2k'|'4k' }
   ground: { contactShadow: { enabled; opacity; blur; resolution; far; color }; offset; scale;
@@ -138,9 +142,9 @@ GalbeDocument {
   assets: Record<AssetId, AssetEntry>           // metadata; binaries live in IDB / zip
   effects: EffectSpec[]                         // post-processing stack, ordered (v0.2)
 
-  // later milestones (additive, optional with defaults → no migration needed)
-  animation?: AnimationSpec       // v0.3 timeline (duration, fps, tracks, presets)
-  overlays?: OverlayLayer[]       // v0.3 Cover 2D text layers
+  // v0.3 (additive, defaults fill older files → no migration)
+  animation: { duration; fps; loop; tracks: Track[]; motions: Motion[] }
+  overlays: Overlay[]             // Cover 2D text layers, top-most last
 }
 ```
 
@@ -200,6 +204,23 @@ maps onto `MeshMatcapMaterial` (matcap image, tint, opacity). **Presets** are pl
 data in `@galbe/core/presets`: applying a preset copies its spec into the document, so
 documents never depend on preset definitions that might change later.
 
+**Animation** (v0.3, `schema/animation.ts`). A `Track` holds keyframes
+`{ id, time, value: number | '#rrggbb', easing }` for one property addressed by a dot path
+from the document root, where arrays of identified objects are indexed by id:
+`nodes.<id>.transform.rotation.1`, `materials.<id>.color`, `effects.<id>.params.intensity`,
+`overlays.<id>.opacity`, `camera.fov`… Ids are base62, so paths never need escaping, and
+they survive reordering. Easings are named curves (including `hold`, overshoot, elastic,
+bounce) or a CSS-style cubic-bezier tuple. A `Motion` is a preset applied on top of the
+tracks: `spin | float | swing | wave | reveal | materialTransition` on a node, or
+`orbit | truck | dolly` on the camera, each with a time span (`start`, `end` or null =
+end of the timeline). Repeating motions use whole turns and cycles, and one-way motions
+offer ping-pong, so loops are seamless by construction.
+
+**Overlays** (`schema/cover.ts`) are flat text drawn over the render: text, `FontRef`,
+size as a fraction of the frame height, colour, opacity, position in frame coordinates
+(0,0 top-left), alignment, spacing, rotation, case and a legibility shadow. They are
+animatable like everything else.
+
 ### 3.2 Assets and URIs
 
 Binary content is referenced, never inlined, through an **asset URI**:
@@ -231,6 +252,10 @@ assets, so a saved project renders offline and on any machine.
 `@galbe/core/ops` contains small functions (`addNode`, `removeNodes`, `duplicateNodes`,
 `reorderNode`, `setMaterial`…) written to mutate a draft. The studio runs them inside
 Immer's `produce`, which gives structural sharing for free; tests run them on clones.
+Removing nodes also prunes their tracks and motions; duplicating copies them; materials a
+transition blends into are never pruned. Keyframe operations (`setKeyframe`, `keyChanges`,
+`shiftKeyframes`, `removeKeyframes`, `closeLoop`, `bakeTrackedValues`) live in
+`@galbe/core/animation` and follow the same draft-mutating style.
 
 ### 3.5 The `.galbe` file format
 
@@ -360,15 +385,61 @@ reach (`PostStack.support`). Grain and glitch are seeded, never time-based. LUTs
 `.cube` files (`parseCubeLut`) or procedural looks, loaded with the document so exports
 never miss them.
 
-### 4.5 Animation (v0.3)
+### 4.5 Animation
 
-`evaluate(doc, t) → PropertyOverrides` resolves presets and keyframe tracks
-(any numeric or colour property addressed by a JSON path) with easing. The controller
-applies overrides on top of the document for that frame. Playback in the studio and
-video export call the same function; video export steps `t = frame / fps`, so output
-is identical regardless of machine speed.
+`evaluateScene(doc, t) → { doc, parts }` (core, pure) resolves the timeline at time `t`:
 
----
+1. every enabled track is sampled (held before its first and after its last key, colours
+   interpolated in sRGB like CSS, integer fields rounded) and written through a
+   copy-on-write `PathWriter`, so the evaluated document shares every untouched branch with
+   the source — cheap enough to run every frame;
+2. motions are applied in order on top: transforms are offset (spin, float, swing), the
+   camera is moved (orbit around the target, truck sideways, dolly along the view axis), a
+   material transition writes a synthetic blended material (`__motion_<id>_<source>`:
+   numbers and colours interpolate, textures and switches flip at half-way);
+3. per-letter motions (`wave`, `reveal`) are returned as `parts` for text and shape nodes,
+   and `partTransform(parts, index, count)` gives each letter's offset, rotation and scale
+   about its own centre (reveal orders: forward, backward, centre, edges, seeded random).
+
+`SceneController.syncAt(doc, t)` syncs the evaluated document, then applies `parts`: text
+keeps its rest pose (positions, normals, glyph centres from the `part` attribute) and
+rewrites the vertex buffers; shapes set one matrix per path mesh. A letter scaled to 0
+collapses to a point and draws nothing. When the document is animated, the ground (contact
+shadow, reflective floor) is placed from the _un-animated_ document once per edit, so a
+floating object's shadow softens instead of following it. `baseCameraFor` inverts the
+camera motions, which lets the studio's orbit controls keep editing the base camera while
+a camera move is playing. Playback, the image export (at the playhead) and the video
+export all call `syncAt`; nothing reads the clock.
+
+### 4.6 Backgrounds and media
+
+`BackgroundLayer` draws gradient, image and video backgrounds with one GLSL function,
+`galbeBackground(p)`, evaluated in **full-frame** coordinates (the camera's view offset and
+the render target size are read in `onBeforeRender`), so export tiles line up. Without
+effects it is a full-screen triangle at the back of the scene (render order −10 000, not
+tone-mapped): glass refracts it and contact shadows fall on it. With effects, the mesh is
+hidden and the effect stack's background pass composites the same function after tone
+mapping, sharing the layer's uniform objects. Gradients are blended in sRGB (mesh gradients
+use inverse-distance weights) with optional dithering; media are fitted like CSS
+`object-fit`.
+
+`VideoLibrary` owns one `<video>` per clip and maps timeline time to clip time
+(`startAt + t × speed`, looped or clamped). While the studio plays, clips play natively and
+are re-synced only when they drift; when paused or exporting, each clip is seeked to the
+exact time and `whenReady()` waits for the `seeked` event and the next presented frame.
+The same clips back video _textures_: `TextureLibrary` routes asset URIs whose kind is
+`video` to the library.
+
+### 4.7 Geometry worker
+
+`GeometryWorkerClient` (engine) talks to a worker that runs `serveGeometry`
+(`@galbe/engine/worker`, which imports only the text and shape builders). The worker has
+its own `FontLibrary`; the studio's worker reads project fonts straight from IndexedDB.
+Requests carry the node's geometry fields; results are triangle soups whose buffers are
+transferred. The controller keeps the previous geometry until the matching result arrives
+(stale results are dropped by build key), tracks the request in `whenReady()`, and falls
+back to building on the main thread if the worker dies. Tests run the same client and
+server in-process.
 
 ## 5. Studio (`apps/studio`)
 
@@ -380,6 +451,16 @@ is identical regardless of machine speed.
     single undo step while the viewport updates live.
   - History stores document snapshots (cheap thanks to structural sharing). Camera
     moves are excluded from history: restoring a snapshot keeps the current camera.
+- **`usePlaybackStore`**: playhead (snapped to frames when paused), playing, auto-key,
+  timeline visibility, selected keyframes. Playback advances with `requestAnimationFrame`;
+  the viewport re-syncs on every tick through `showFrame(doc, t)`.
+- **Auto-key** is a hook inside `update`: after a recipe runs, `diffAnimatable` lists the
+  numbers and colours that changed under animatable roots and `keyChanges` keys them at the
+  playhead — always for properties that already have a track, and for any property when
+  auto-key is on (with the previous value keyed at 0). Structural edits pass
+  `animate: false`. When the playhead moves, `bakePlayhead` writes the tracked values at
+  that time into the document (no undo step, never keyed), so the inspector shows and edits
+  what the viewport shows.
 - **`useUiStore`**: selection, active shape path, inspector and left-panel tabs, expanded
   effect, panel visibility, dialogs, `interacting` flag (drives adaptive quality).
 - **History panel**: lists `past` / `future` labels; clicking an entry calls
@@ -396,6 +477,11 @@ is identical regardless of machine speed.
 - R3F `<Canvas frameloop="demand">`, sized to the **frame aspect** and fitted in the
   viewport area like an artboard — what you see is exactly what you export.
   Transparent backgrounds show a checkerboard behind the canvas.
+- Cover overlays are drawn on a 2D canvas over the WebGL canvas with the exporter's own
+  `drawOverlays`, so the viewport matches exports; overlay fonts are registered as
+  `FontFace`s (one family per file, listed in fallback order). In the Cover tab each
+  overlay gets a drag handle. Guides (safe zones, thirds, golden ratio, columns, centre
+  lines) are an SVG layer that is never exported.
 - `OrbitControls` drive the document camera; drei `TransformControls` move the
   selected node; clicks raycast into the engine group to select (`userData.nodeId`).
 - **Adaptive quality**: while orbiting, dragging a gizmo or a slider, DPR drops to 1;
@@ -435,9 +521,15 @@ is identical regardless of machine speed.
   rendered with a padding margin and cropped, composed on a 2D canvas, then encoded to
   PNG/JPG/WebP (alpha preserved for PNG/WebP). The tile size respects the GPU limits
   (`MAX_TEXTURE_SIZE`, `MAX_RENDERBUFFER_SIZE`, viewport dims), so 8K works on any GPU.
-- **Video** (v0.3): deterministic frame stepping → WebCodecs `VideoEncoder` →
-  Mediabunny muxer (MP4 H.264; WebM VP9 with alpha where supported) → PNG sequence
-  (zip) fallback.
+- **Frames**: `composeImage` is the tile composer shared by images and video frames; an
+  `afterCompose` hook draws the overlays (`drawOverlays`, pure canvas 2D) on top.
+- **Video** (v0.3): `renderVideo` asks the host to draw frame `i` at time `i / fps` into one
+  canvas, awaits it, then hands it to Mediabunny's `CanvasSource` (WebCodecs): MP4 / H.264
+  (fallback HEVC, AV1) or WebM / VP9 (alpha kept as side data). Sizes are rounded to even
+  pixels. PNG sequences are streamed into a zip (stored, PNGs are already compressed). The
+  studio's `renderFrame(doc, t)` syncs the scene at `t`, waits for every load (fonts,
+  textures, worker geometry, video seeks), renders through the effect stack, then draws
+  the overlays — the image export uses the same function at the playhead.
 - **3D** (v0.4): `GLTFExporter` (GLB) and `USDZExporter` on a baked copy of the scene.
 
 ---

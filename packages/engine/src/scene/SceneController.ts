@@ -551,7 +551,18 @@ export class SceneController {
     } = node;
     this.track(
       worker
-        .buildText({ text, font, size, depth, curveSegments, bevel, letterSpacing, lineHeight, align, deform })
+        .buildText({
+          text,
+          font,
+          size,
+          depth,
+          curveSegments,
+          bevel,
+          letterSpacing,
+          lineHeight,
+          align,
+          deform,
+        })
         .then(
           ({ soup, glyphCount }) => {
             if (entry.buildKey !== key || !entry.mesh) return;
@@ -565,7 +576,11 @@ export class SceneController {
             if (entry.buildKey !== key) return;
             // Retry on the main thread if the worker itself died.
             if (worker.broken) entry.buildKey = undefined;
-            else this.status.errors.set(node.id, error instanceof Error ? error.message : String(error));
+            else
+              this.status.errors.set(
+                node.id,
+                error instanceof Error ? error.message : String(error),
+              );
           },
         ),
     );
@@ -661,7 +676,10 @@ export class SceneController {
               if (entry.buildKey !== key) return;
               if (worker.broken) entry.buildKey = undefined;
               else
-                this.status.errors.set(node.id, error instanceof Error ? error.message : String(error));
+                this.status.errors.set(
+                  node.id,
+                  error instanceof Error ? error.message : String(error),
+                );
             },
           ),
       );

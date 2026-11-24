@@ -115,6 +115,19 @@ exports and tiled 8K exports have no seams. Colour work happens in display space
 (`toSrgb` / `toLinear`). Write your own GLSL and keep it in the effect's file. Avoid GLSL
 reserved words as identifiers (`active`, `half`, `input`, `output`…).
 
+### Add a motion preset
+
+1. Add a member to `MotionSchema` in `packages/core/src/schema/animation.ts` (with `...timing`
+   and either a `nodeId` or none for a camera move) and list it in `NODE_MOTION_TYPES` or
+   `CAMERA_MOTION_TYPES`.
+2. Apply it in `packages/core/src/animation/evaluate.ts`: node motions in
+   `applyNodeMotion`, per-letter ones in `partTransform`, camera ones in
+   `applyCameraMotion` (with its inverse, so orbiting the viewport keeps working). Keep it a
+   pure function of time; repeating motions should use whole cycles so they loop.
+3. Give it a label and a hint in `apps/studio/src/features/motion/motionInfo.ts` and its
+   parameters in `MotionCard` (`MotionSection.tsx`).
+4. Add a test in `packages/core/test/v03.test.ts` (loops, determinism).
+
 ### Add a template (v0.4)
 
 Templates are ordinary `.galbe` files in `templates/`:
