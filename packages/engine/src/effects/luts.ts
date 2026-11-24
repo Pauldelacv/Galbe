@@ -68,9 +68,9 @@ const LOOKS: Record<string, Look> = {
     // Shadows towards teal, highlights towards orange, skin-ish midtones kept.
     const t = smooth(y);
     return [
-      clamp(contrast(r, 1.08) + 0.08 * t - 0.05 * (1 - t)),
-      clamp(contrast(g, 1.05) + 0.02 * t + 0.02 * (1 - t)),
-      clamp(contrast(b, 1.08) - 0.1 * t + 0.07 * (1 - t)),
+      clamp(contrast(r, 1.06) + 0.07 * t - 0.03 * (1 - t) * y * 4),
+      clamp(contrast(g, 1.04) + 0.02 * t + 0.015 * (1 - t) * y * 4),
+      clamp(contrast(b, 1.06) - 0.08 * t + 0.04 * (1 - t) * y * 4),
     ];
   },
   warm: (r, g, b) => [clamp(r * 1.06 + 0.02), clamp(g * 1.01 + 0.01), clamp(b * 0.9)],

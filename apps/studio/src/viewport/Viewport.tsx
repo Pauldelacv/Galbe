@@ -67,7 +67,7 @@ export function Viewport() {
           <Scale3d />
         </IconButton>
         <span className={styles.divider} />
-        <IconButton label="Frame selection (F)" onClick={frameSelection}>
+        <IconButton label="Frame selection (F)" onClick={() => frameSelection()}>
           <Focus />
         </IconButton>
       </div>

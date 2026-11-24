@@ -38,7 +38,10 @@ const depthMaterial = () =>
     fragmentShader: /* glsl */ `
       void main() {
         // Orthographic depth is linear: 0 on the ground, 1 at "far".
-        float d = 1.0 - gl_FragCoord.z;
+        float d = clamp(1.0 - gl_FragCoord.z, 0.0, 1.0);
+        // Some drivers (and software GL) produce NaN depth on degenerate fragments; a
+        // single NaN texel would spread through the blur, so drop it.
+        if (isnan(d) || isinf(d)) d = 0.0;
         d = d * d * (3.0 - 2.0 * d);
         gl_FragColor = vec4(d);
       }`,
@@ -67,7 +70,7 @@ const blurMaterial = () =>
         sum += texture2D(tDiffuse, vUv - uDirection * 3.0) * 0.0540540;
         sum += texture2D(tDiffuse, vUv + uDirection * 4.0) * 0.0162162;
         sum += texture2D(tDiffuse, vUv - uDirection * 4.0) * 0.0162162;
-        gl_FragColor = sum;
+        gl_FragColor = (any(isnan(sum)) || any(isinf(sum))) ? vec4(0.0) : sum;
       }`,
     depthTest: false,
     depthWrite: false,

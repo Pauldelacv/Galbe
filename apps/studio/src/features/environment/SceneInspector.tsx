@@ -426,7 +426,7 @@ function CameraSection() {
         }
       />
       <div className={styles.buttons}>
-        <Button size="sm" icon={<Focus />} onClick={frameSelection}>
+        <Button size="sm" icon={<Focus />} onClick={() => frameSelection(true)}>
           Frame all
         </Button>
         <Button size="sm" icon={<RotateCcw />} onClick={resetCamera}>

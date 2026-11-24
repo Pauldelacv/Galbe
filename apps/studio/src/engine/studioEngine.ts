@@ -72,3 +72,6 @@ export function setInvalidate(fn: () => void): void {
 export function requestRender(): void {
   invalidate();
 }
+
+/** Debug / end-to-end testing handle (no API guarantees). */
+(globalThis as Record<string, unknown>).__galbe = { viewport, controller };

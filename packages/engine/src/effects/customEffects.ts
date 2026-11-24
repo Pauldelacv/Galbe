@@ -293,7 +293,8 @@ float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
 float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
 
 void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
-  float s = max(pixelSize * uPxScale, 1.0);
+  // Whole render pixels per cell: fractional cells beat against the Bayer pattern.
+  float s = max(floor(pixelSize * uPxScale + 0.5), 1.0);
   vec2 cell = floor(framePx(uv) / s);
   vec3 c = clamp(toSrgb(texture2D(inputBuffer, tileUv((cell + 0.5) * s)).rgb), 0.0, 1.0);
   float threshold = pattern < 3.0 ? bayer2(cell) : pattern < 6.0 ? bayer4(cell) : bayer8(cell);
@@ -390,12 +391,12 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
   float band = floor((uFull.y - px.y) / (b * 0.35));
   float column = floor(px.x / (b * 3.0));
   float pick = hash12(vec2(band, seed));
-  float active = step(1.0 - amount * 0.6, pick);
+  float hit = step(1.0 - amount * 0.6, pick);
   float blockPick = hash12(vec2(band * 0.37 + column, seed + 7.0));
-  active = max(active, step(1.0 - amount * 0.15, blockPick));
-  float shift = (hash12(vec2(band, seed + 3.0)) - 0.5) * b * 2.0 * amount * active;
+  hit = max(hit, step(1.0 - amount * 0.15, blockPick));
+  float shift = (hash12(vec2(band, seed + 3.0)) - 0.5) * b * 2.0 * amount * hit;
   vec2 offsetPx = vec2(shift, 0.0);
-  float rgb = split * uPxScale * (0.4 + active);
+  float rgb = split * uPxScale * (0.4 + hit);
   vec2 sUv = tileUv(px + offsetPx);
   vec2 d = vec2(rgb, 0.0) / resolution;
   float r = texture2D(inputBuffer, sUv + d).r;
@@ -405,4 +406,38 @@ void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor)
 }`,
     { amount: 0.5, block: 40, split: 6, seed: 7 },
     true,
+  );
+
+/**
+ * Composites a flat background colour under the (premultiplied) image after tone mapping,
+ * so colour backgrounds look exactly as without effects (three never tone-maps them).
+ */
+export const createBackgroundEffect = () =>
+  new GalbeEffect(
+    'GalbeBackground',
+    /* glsl */ `
+uniform vec3 background;
+uniform bool enabled;
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  outputColor = enabled
+    ? vec4(inputColor.rgb + background * (1.0 - inputColor.a), 1.0)
+    : inputColor;
+}`,
+    { background: new Color(), enabled: false },
+  );
+
+/**
+ * Replaces NaN/∞ (half-float overflow on very bright speculars) before light-spreading
+ * effects, which would otherwise smear them over the whole frame.
+ */
+export const createSanitizeEffect = () =>
+  new GalbeEffect(
+    'GalbeSanitize',
+    /* glsl */ `
+void mainImage(const in vec4 inputColor, const in vec2 uv, out vec4 outputColor) {
+  vec4 c = inputColor;
+  if (any(isnan(c)) || any(isinf(c))) c = vec4(vec3(60000.0), 1.0);
+  outputColor = clamp(c, vec4(0.0), vec4(60000.0));
+}`,
+    {},
   );

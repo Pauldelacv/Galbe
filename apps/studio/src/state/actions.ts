@@ -98,8 +98,8 @@ export function renameNode(id: string, name: string): void {
 }
 
 /** Points the camera at the selection (or everything), keeping the viewing angle. */
-export function frameSelection(): void {
-  const ids = selection();
+export function frameSelection(all = false): void {
+  const ids = all ? [] : selection();
   const bounds = ids.length === 1 ? controller.bounds(ids[0]) : controller.bounds();
   if (!bounds) return;
   const doc = documentApi.get();

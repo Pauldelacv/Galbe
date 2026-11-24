@@ -248,7 +248,8 @@ export function applyPhysicalSpec(material: MeshPhysicalMaterial, spec: Physical
   material.sheenRoughness = spec.sheenRoughness;
   material.iridescence = spec.iridescence;
   material.iridescenceIOR = spec.iridescenceIOR;
-  material.iridescenceThicknessRange = [spec.iridescenceThickness[0], spec.iridescenceThickness[1]];
+  material.iridescenceThicknessMinimum = spec.iridescenceThickness[0];
+  material.iridescenceThicknessMaximum = spec.iridescenceThickness[1];
 
   material.specularIntensity = spec.specularIntensity;
   material.specularColor.set(spec.specularColor);

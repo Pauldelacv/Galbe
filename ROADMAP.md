@@ -36,7 +36,7 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ⬜ Object tool: GLB/GLTF/FBX/OBJ import, scale & pivot normalisation, material override
 - ⬜ Full material editor, custom material library (saved locally), PBR textures (ambientCG),
   matcaps, video textures, holographic shader
-- ⬜ Add procedural node-based materials 
+- ⬜ Add procedural node-based materials
 - ⬜ Additional lights (directional, point, spot) UI, reflective ground
 - ⬜ Post-processing stack (reorderable): bloom, DOF, chromatic aberration, grain, vignette,
   halftone, dithering, pixel, ASCII, glitch, LUT; extensible GLSL effect registry

@@ -27,7 +27,7 @@ import { importSvg } from '@galbe/engine';
 import type { Draft } from 'immer';
 import { controller } from '../engine/studioEngine.ts';
 import { putAsset } from '../persistence/assetStore.ts';
-import { keepContentInFrame } from './actions.ts';
+import { frameSelection } from './actions.ts';
 import { documentApi } from './documentStore.ts';
 import { notify } from './toastStore.ts';
 import { useUiStore } from './uiStore.ts';
@@ -55,8 +55,8 @@ function placementFor(size: number): [number, number, number] {
 
 function finishAdd(id: string): void {
   useUiStore.getState().select([id]);
-  // Frame after the engine has built the new geometry.
-  requestAnimationFrame(() => keepContentInFrame());
+  // Frame everything once the engine has built the new geometry.
+  requestAnimationFrame(() => frameSelection(true));
 }
 
 export function addPrimitive(kind: PrimitiveKind): string {

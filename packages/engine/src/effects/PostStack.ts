@@ -17,6 +17,7 @@ import {
 } from 'postprocessing';
 import {
   type Camera,
+  Color,
   type Data3DTexture,
   HalfFloatType,
   NoToneMapping,
@@ -28,6 +29,7 @@ import {
 import {
   createAdjustEffect,
   createAsciiEffect,
+  createBackgroundEffect,
   createChromaticAberrationEffect,
   createDitherEffect,
   createGlitchEffect,
@@ -35,6 +37,7 @@ import {
   createHalftoneEffect,
   createLutEffect,
   createPixelEffect,
+  createSanitizeEffect,
   createVignetteEffect,
   type FrameInfo,
   type GalbeEffect,
@@ -167,7 +170,11 @@ export interface PostRenderView {
 export class PostStack {
   private composer: EffectComposer | null = null;
   private renderPass: RenderPass | null = null;
+  // Passes dispose their effects, so these are recreated on every rebuild.
   private toneMapping = new ToneMappingEffect({ mode: ToneMappingMode.NEUTRAL });
+  private background = createBackgroundEffect();
+  private sanitize = createSanitizeEffect();
+  private toneMode: number = ToneMappingMode.NEUTRAL;
   private slots: Slot[] = [];
   private passes: (EffectPass | RenderPass)[] = [];
   private signature = '';
@@ -210,16 +217,11 @@ export class PostStack {
     this.effects = [...effects];
     this.frameHeight = options.frameHeight;
     this.context = options.context;
-    this.toneMapping.mode = TONE_MODES[options.render.toneMapping];
+    this.toneMode = TONE_MODES[options.render.toneMapping];
+    this.toneMapping.mode = this.toneMode;
   }
 
   private ensure(scene: Scene, camera: Camera): EffectComposer {
-    if (!this.composer) {
-      this.composer = new EffectComposer(this.renderer, {
-        frameBufferType: HalfFloatType,
-        multisampling: Math.min(4, this.renderer.capabilities.maxSamples),
-      });
-    }
     const enabled = this.effects.filter(
       (effect) => effect.enabled && registry.has(effect.type) && getEffectDefinition(effect.type),
     );
@@ -228,7 +230,12 @@ export class PostStack {
       ...enabled.filter((e) => getEffectDefinition(e.type)!.stage === 'display'),
     ];
     const signature = ordered.map((effect) => `${effect.id}:${effect.type}`).join('|');
-    if (signature !== this.signature || scene !== this.scene || camera !== this.camera) {
+    if (
+      !this.composer ||
+      signature !== this.signature ||
+      scene !== this.scene ||
+      camera !== this.camera
+    ) {
       this.rebuild(ordered, scene, camera);
       this.signature = signature;
       this.scene = scene;
@@ -237,15 +244,23 @@ export class PostStack {
       const byId = new Map(ordered.map((spec) => [spec.id, spec]));
       for (const slot of this.slots) slot.spec = byId.get(slot.spec.id) ?? slot.spec;
     }
-    return this.composer;
+    return this.composer!;
   }
 
   private rebuild(ordered: EffectSpec[], scene: Scene, camera: Camera): void {
-    const composer = this.composer!;
-    composer.removeAllPasses();
+    // A fresh composer each time: removing passes that used the depth texture (DOF)
+    // leaves the old buffers unusable. EffectPass.dispose() also disposes its effects.
     for (const pass of this.passes) pass.dispose();
-    for (const slot of this.slots) slot.effect.dispose();
+    this.composer?.dispose();
+    const composer = new EffectComposer(this.renderer, {
+      frameBufferType: HalfFloatType,
+      multisampling: Math.min(4, this.renderer.capabilities.maxSamples),
+    });
+    this.composer = composer;
     this.slots = [];
+    this.toneMapping = new ToneMappingEffect({ mode: this.toneMode as ToneMappingMode });
+    this.background = createBackgroundEffect();
+    this.sanitize = createSanitizeEffect();
     this.renderPass = new RenderPass(scene, camera);
     composer.addPass(this.renderPass);
     this.passes = [this.renderPass];
@@ -256,9 +271,12 @@ export class PostStack {
       this.slots.push({ spec, effect, implementation, stage });
     }
     const passes: EffectPass[] = [];
+    if (this.slots.some((s) => s.stage === 'hdr'))
+      passes.push(new EffectPass(camera, this.sanitize));
     for (const slot of this.slots.filter((s) => s.stage === 'hdr'))
       passes.push(new EffectPass(camera, slot.effect));
     passes.push(new EffectPass(camera, this.toneMapping));
+    passes.push(new EffectPass(camera, this.background));
     for (const slot of this.slots.filter((s) => s.stage === 'display'))
       passes.push(new EffectPass(camera, slot.effect));
     for (const pass of passes) composer.addPass(pass);
@@ -299,21 +317,32 @@ export class PostStack {
         if (slot.effect instanceof DepthOfFieldEffect) slot.effect.mainCamera = camera;
       }
     }
+    // A colour background is cleared, not shaded: keep it out of tone mapping and effects
+    // that read light (bloom), and lay it under the image afterwards.
+    const background = scene.background;
+    const flat = background instanceof Color;
+    this.background.set('enabled', flat);
+    if (flat) {
+      (this.background.uniforms.get('background')!.value as Color).copy(background);
+      scene.background = null;
+    }
     const toneMapping = this.renderer.toneMapping;
+    const clearAlpha = this.renderer.getClearAlpha();
     this.renderer.toneMapping = NoToneMapping;
+    this.renderer.setClearAlpha(0);
     try {
       composer.render();
     } finally {
       this.renderer.toneMapping = toneMapping;
+      this.renderer.setClearAlpha(clearAlpha);
+      if (flat) scene.background = background;
     }
   }
 
   dispose(): void {
     for (const pass of this.passes) pass.dispose();
     this.passes = [];
-    for (const slot of this.slots) slot.effect.dispose();
     this.slots = [];
-    this.toneMapping.dispose();
     this.composer?.dispose();
     this.composer = null;
     this.signature = '';
