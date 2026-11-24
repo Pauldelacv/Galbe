@@ -11,7 +11,7 @@ import {
 } from '@galbe/core';
 import { Window } from 'happy-dom';
 import { produce } from 'immer';
-import { Box3, Mesh, type MeshPhysicalMaterial, Scene, Texture } from 'three';
+import { Box3, Mesh, type MeshPhysicalMaterial, Scene, Texture, Vector3 } from 'three';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { createNoise3D } from '../src/geometry/noise.ts';
 import { buildPrimitiveGeometry } from '../src/geometry/primitives.ts';
@@ -36,9 +36,7 @@ describe('primitives', () => {
     const geometry = buildPrimitiveGeometry(node);
     expect(geometry.getAttribute('position').count).toBeGreaterThan(50);
     expect(geometry.getAttribute('normal')).toBeDefined();
-    const size = geometry.boundingBox!.getSize(
-      new (geometry.boundingBox!.max.constructor as never)(),
-    );
+    const size = geometry.boundingBox!.getSize(new Vector3());
     expect(Math.max(size.x, size.y, size.z)).toBeGreaterThan(0.5);
   });
 
