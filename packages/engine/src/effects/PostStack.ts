@@ -26,6 +26,7 @@ import {
   Vector2,
   type WebGLRenderer,
 } from 'three';
+import type { BackgroundLayer } from '../background/BackgroundLayer.ts';
 import {
   createAdjustEffect,
   createAsciiEffect,
@@ -172,7 +173,7 @@ export class PostStack {
   private renderPass: RenderPass | null = null;
   // Passes dispose their effects, so these are recreated on every rebuild.
   private toneMapping = new ToneMappingEffect({ mode: ToneMappingMode.NEUTRAL });
-  private background = createBackgroundEffect();
+  private background: GalbeEffect;
   private sanitize = createSanitizeEffect();
   private toneMode: number = ToneMappingMode.NEUTRAL;
   private slots: Slot[] = [];
@@ -186,7 +187,16 @@ export class PostStack {
   private scene: Scene | null = null;
   private camera: Camera | null = null;
 
-  constructor(private readonly renderer: WebGLRenderer) {}
+  /**
+   * `layer`: the scene's gradient / media background; with effects on, it is composited
+   * after tone mapping (like a flat colour) instead of being drawn in the scene.
+   */
+  constructor(
+    private readonly renderer: WebGLRenderer,
+    private readonly layer?: BackgroundLayer,
+  ) {
+    this.background = createBackgroundEffect(layer?.uniforms);
+  }
 
   get active(): boolean {
     return this.effects.some(
@@ -259,7 +269,7 @@ export class PostStack {
     this.composer = composer;
     this.slots = [];
     this.toneMapping = new ToneMappingEffect({ mode: this.toneMode as ToneMappingMode });
-    this.background = createBackgroundEffect();
+    this.background = createBackgroundEffect(this.layer?.uniforms);
     this.sanitize = createSanitizeEffect();
     this.renderPass = new RenderPass(scene, camera);
     composer.addPass(this.renderPass);
@@ -321,11 +331,14 @@ export class PostStack {
     // that read light (bloom), and lay it under the image afterwards.
     const background = scene.background;
     const flat = background instanceof Color;
-    this.background.set('enabled', flat);
+    const layered = !!this.layer?.active && this.layer.mesh.visible;
+    this.background.set('enabled', flat || layered);
+    this.background.set('layered', layered);
     if (flat) {
       (this.background.uniforms.get('background')!.value as Color).copy(background);
       scene.background = null;
     }
+    if (layered) this.layer!.mesh.visible = false;
     const toneMapping = this.renderer.toneMapping;
     const clearAlpha = this.renderer.getClearAlpha();
     this.renderer.toneMapping = NoToneMapping;
@@ -336,6 +349,7 @@ export class PostStack {
       this.renderer.toneMapping = toneMapping;
       this.renderer.setClearAlpha(clearAlpha);
       if (flat) scene.background = background;
+      if (layered) this.layer!.mesh.visible = true;
     }
   }
 

@@ -80,6 +80,9 @@ export class EnvironmentController {
         scene.backgroundBlurriness = background.blur;
         scene.backgroundIntensity = background.intensity;
         break;
+      default:
+        // Gradients, images and videos are drawn by the BackgroundLayer.
+        scene.background = null;
     }
   }
 

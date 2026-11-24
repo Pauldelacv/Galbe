@@ -1,4 +1,5 @@
 export * from './assets/AssetSource.ts';
+export * from './background/BackgroundLayer.ts';
 export * from './effects/customEffects.ts';
 export * from './effects/luts.ts';
 export * from './effects/PostStack.ts';
@@ -13,6 +14,7 @@ export * from './geometry/subdivide.ts';
 export * from './ground/ReflectiveGround.ts';
 export * from './materials/MaterialLibrary.ts';
 export * from './materials/TextureLibrary.ts';
+export * from './media/VideoLibrary.ts';
 export * from './models/ModelLibrary.ts';
 export * from './render.ts';
 export * from './scene/LightsController.ts';
