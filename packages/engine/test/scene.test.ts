@@ -50,7 +50,8 @@ describe('SceneController', () => {
     const material = mesh.material as MeshPhysicalMaterial;
     expect(material.metalness).toBe(1);
     const next = produce(doc, (draft) => {
-      draft.materials[node.materialId]!.roughness = 0.7;
+      const m = draft.materials[node.materialId]!;
+      if (m.type === 'physical') m.roughness = 0.7;
     });
     controller.sync(next);
     expect(mesh.material).toBe(material);

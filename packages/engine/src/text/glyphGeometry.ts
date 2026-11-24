@@ -1,5 +1,5 @@
 import type { Font, Glyph } from 'opentype.js';
-import { BufferGeometry, ExtrudeGeometry, Float32BufferAttribute } from 'three';
+import { BufferGeometry, ExtrudeGeometry, Float32BufferAttribute, type Shape } from 'three';
 import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { TriangleSoup } from '../geometry/soup.ts';
 import { glyphShapes } from './outline.ts';
@@ -36,6 +36,14 @@ export function extrudeGlyph(font: Font, glyph: Glyph, params: ExtrudeParams): T
     params.size / font.unitsPerEm,
     params.curveSegments,
   );
+  return extrudeShapes(shapes, params);
+}
+
+/**
+ * Extrudes flat shapes (with holes) into a soup centred in Z. Shared by text and vector
+ * shapes. `params.size` is unused here (shapes are already scaled).
+ */
+export function extrudeShapes(shapes: Shape[], params: ExtrudeParams): TriangleSoup | null {
   if (!shapes.length) return null;
 
   const bevel = params.bevel.enabled && (params.bevel.size > 0 || params.bevel.thickness > 0);
