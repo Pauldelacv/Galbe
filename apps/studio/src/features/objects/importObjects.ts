@@ -1,6 +1,7 @@
 import { isMeshNode, nodeMaterialIds, projectAssetUri, type TextureSlot } from '@galbe/core';
 import { unzipSync } from 'fflate';
 import { pickFiles } from '../../lib/files.ts';
+import { textureSlotFromName } from '../../lib/textureSlots.ts';
 import { putAsset } from '../../persistence/assetStore.ts';
 import { documentApi } from '../../state/documentStore.ts';
 import {
@@ -66,27 +67,6 @@ export function targetMaterialIds(): string[] {
   return ids;
 }
 
-/** Recognises PBR map files by name (ambientCG, Poly Haven, Substance conventions). */
-export function textureSlotFromName(name: string): TextureSlot | null {
-  const base = name.toLowerCase().replace(/\.[a-z0-9]+$/, '');
-  if (
-    /(^|[_\-. ])(normal(gl)?|nor(_gl)?|nrm)([_\-. ]|$)/.test(base) &&
-    !/normaldx|nor_dx/.test(base)
-  )
-    return 'normalMap';
-  if (/normaldx|nor_dx/.test(base)) return 'normalMap';
-  if (/(^|[_\-. ])(roughness|rough|rgh)([_\-. ]|$)/.test(base)) return 'roughnessMap';
-  if (/(^|[_\-. ])(metalness|metallic|metal)([_\-. ]|$)/.test(base)) return 'metalnessMap';
-  if (/(^|[_\-. ])(ambientocclusion|ao|occlusion)([_\-. ]|$)/.test(base)) return 'aoMap';
-  if (/(^|[_\-. ])(emission|emissive|emit)([_\-. ]|$)/.test(base)) return 'emissiveMap';
-  if (/(^|[_\-. ])(opacity|alpha|mask)([_\-. ]|$)/.test(base)) return 'alphaMap';
-  if (
-    /(^|[_\-. ])(color|colour|basecolor|base_color|albedo|diffuse|diff|col)([_\-. ]|$)/.test(base)
-  )
-    return 'map';
-  return null;
-}
-
 const IMAGE = /\.(png|jpe?g|webp|avif)$/i;
 
 /** Stores image files as textures of the selected material(s), by slot. */
@@ -103,7 +83,11 @@ export async function applyTextureFiles(
     TextureSlot,
     { uri: string; entry: Awaited<ReturnType<typeof putAsset>> }
   >();
-  for (const file of files) {
+  // Prefer OpenGL-style normal maps (what three.js expects) over DirectX ones.
+  const ordered = [...files].sort(
+    (a, b) => Number(/normaldx|nor_dx/i.test(a.name)) - Number(/normaldx|nor_dx/i.test(b.name)),
+  );
+  for (const file of ordered) {
     if (!IMAGE.test(file.name)) continue;
     const slot = textureSlotFromName(file.name) ?? (files.length === 1 ? fallbackSlot : null);
     if (!slot || assigned.has(slot)) continue;

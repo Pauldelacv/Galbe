@@ -177,6 +177,7 @@ export async function addModelFile(file: File): Promise<string> {
   void controller.whenReady().then(() => {
     const error = controller.status.errors.get(node.id);
     if (error) notify(error, 'error');
+    else frameSelection(true); // the model's size is only known once it has loaded
   });
   return node.id;
 }
