@@ -8,6 +8,7 @@ export type FileKind =
   | 'image'
   | 'lut'
   | 'zip'
+  | 'video'
   | 'unknown';
 
 const BY_EXTENSION: Record<string, FileKind> = {
@@ -29,6 +30,10 @@ const BY_EXTENSION: Record<string, FileKind> = {
   avif: 'image',
   cube: 'lut',
   zip: 'zip',
+  mp4: 'video',
+  webm: 'video',
+  mov: 'video',
+  m4v: 'video',
 };
 
 /** Identifies a file from its signature (magic bytes), for files without a useful name. */

@@ -19,7 +19,7 @@ export type OverlayContext = Pick<
   | 'shadowOffsetY'
 > & { letterSpacing?: string };
 
-/** Resolves a font reference to a loaded CSS family name (null while it loads). */
+/** Resolves a font reference to a CSS `font-family` list, already quoted (null while it loads). */
 export type OverlayFontResolver = (font: FontRef) => string | null;
 
 export interface OverlayLine {
@@ -62,7 +62,7 @@ export function drawOverlays(
     if (overlay.rotation) context.rotate((overlay.rotation * Math.PI) / 180);
     context.globalAlpha = overlay.opacity;
     context.fillStyle = overlay.color;
-    context.font = `${overlay.font.style === 'italic' ? 'italic ' : ''}${overlay.font.weight} ${px}px ${family ? `"${family}", ` : ''}sans-serif`;
+    context.font = `${overlay.font.style === 'italic' ? 'italic ' : ''}${overlay.font.weight} ${px}px ${family ? `${family}, ` : ''}sans-serif`;
     if ('letterSpacing' in context) context.letterSpacing = `${overlay.letterSpacing * px}px`;
     context.textAlign = overlay.align;
     context.textBaseline = 'middle';

@@ -9,6 +9,7 @@ import { useUiStore } from '../state/uiStore.ts';
 import { IconButton } from '../ui/controls.tsx';
 import { CameraRig } from './CameraRig.tsx';
 import { fitFrame } from './frameFit.ts';
+import { GuidesLayer, OverlayLayer } from './OverlayLayer.tsx';
 import { SceneBridge } from './SceneBridge.tsx';
 import { SelectionGizmo } from './SelectionGizmo.tsx';
 import styles from './Viewport.module.css';
@@ -96,6 +97,8 @@ export function Viewport() {
           <CameraRig />
           <SelectionGizmo />
         </Canvas>
+        <OverlayLayer width={size.width} height={size.height} />
+        <GuidesLayer />
       </div>
 
       <div className={styles.frameInfo}>

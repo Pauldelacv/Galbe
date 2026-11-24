@@ -1,16 +1,11 @@
 import { MAX_EXPORT_SIDE } from '@galbe/core';
-import {
-  createThreeTileRenderer,
-  gpuTileLimit,
-  type ImageFormat,
-  type RenderedImage,
-  renderImage,
-  scaledSize,
-} from '@galbe/exporters';
-import { drawWithEffects, hideEditorHelpers } from '../../engine/cleanRender.ts';
-import { controller, requestRender, viewport } from '../../engine/studioEngine.ts';
+import { IMAGE_MIME, type ImageFormat, type RenderedImage, scaledSize } from '@galbe/exporters';
+import { refreshViewport } from '../../engine/frame.ts';
+import { requestRender } from '../../engine/studioEngine.ts';
 import { downloadBlob, slugify } from '../../lib/files.ts';
 import { useDocumentStore } from '../../state/documentStore.ts';
+import { usePlaybackStore } from '../../state/playbackStore.ts';
+import { renderFrame } from './frameRenderer.ts';
 
 export interface ExportImageOptions {
   format: ImageFormat;
@@ -23,52 +18,54 @@ export interface ExportImageOptions {
 
 export const EXTENSIONS: Record<ImageFormat, string> = { png: 'png', jpeg: 'jpg', webp: 'webp' };
 
-/** Renders the current frame at the requested size (tiled beyond GPU limits) and downloads it. */
+async function encode(canvas: unknown, mime: string, quality?: number): Promise<Blob> {
+  const c = canvas as OffscreenCanvas | HTMLCanvasElement;
+  if ('convertToBlob' in c)
+    return c.convertToBlob({ type: mime, ...(quality !== undefined ? { quality } : {}) });
+  return new Promise((resolve, reject) =>
+    (c as HTMLCanvasElement).toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error('Encoding failed'))),
+      mime,
+      quality,
+    ),
+  );
+}
+
+/** Renders the frame at the playhead at the requested size (tiled) and downloads it. */
 export async function exportImage(options: ExportImageOptions): Promise<RenderedImage> {
-  const { gl, scene, camera } = viewport;
-  if (!gl || !scene || !camera) throw new Error('The viewport is not ready yet.');
-  await controller.whenReady();
-
   const doc = useDocumentStore.getState().doc;
+  const playback = usePlaybackStore.getState();
+  if (playback.playing) playback.pause();
   const size = scaledSize(doc.frame, options.scale, MAX_EXPORT_SIDE);
-  const maxTileSize = gpuTileLimit(gl.getContext());
-  const background = scene.background;
   const transparent = options.transparent && options.format !== 'jpeg';
-
-  controller.prepareFrame(gl);
-  const restoreHelpers = hideEditorHelpers(scene);
+  let tiles = 1;
   try {
-    const result = await renderImage({
+    const canvas = await renderFrame(doc, usePlaybackStore.getState().time, {
       width: size.width,
       height: size.height,
-      format: options.format,
-      quality: options.quality,
-      maxTileSize,
-      // Screen-space effects read neighbouring pixels: pad tiles by their reach.
-      padding: Math.max(
-        48,
-        Math.ceil((viewport.post?.active ? viewport.post.support : 0) * options.scale),
-      ),
-      renderTile: createThreeTileRenderer({
-        renderer: gl,
-        scene,
-        camera,
-        beforeRender: () => {
-          scene.background = transparent ? null : background;
-        },
-        draw: drawWithEffects,
-      }),
-      ...(options.onProgress ? { onProgress: options.onProgress } : {}),
+      transparent,
+      fill: options.format === 'jpeg' ? '#ffffff' : null,
+      onProgress: (done, total) => {
+        tiles = total;
+        options.onProgress?.(done, total);
+      },
       ...(options.signal ? { signal: options.signal } : {}),
     });
+    const mime = IMAGE_MIME[options.format];
+    const blob = await encode(canvas, mime, options.format === 'png' ? undefined : options.quality);
     downloadBlob(
-      result.blob,
+      blob,
       `${slugify(doc.name)}-${size.width}x${size.height}.${EXTENSIONS[options.format]}`,
     );
-    return result;
+    return {
+      blob,
+      width: size.width,
+      height: size.height,
+      tiles,
+      formatHonoured: blob.type === '' || blob.type === mime,
+    };
   } finally {
-    restoreHelpers();
-    scene.background = background;
+    refreshViewport();
     requestRender();
   }
 }

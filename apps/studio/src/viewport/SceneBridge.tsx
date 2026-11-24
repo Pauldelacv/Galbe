@@ -1,9 +1,12 @@
-import { applyRenderSettings, PostStack } from '@galbe/engine';
+import { PostStack } from '@galbe/engine';
 import { type ThreeEvent, useFrame, useThree } from '@react-three/fiber';
 import { useEffect } from 'react';
 import { drawWithEffects } from '../engine/cleanRender.ts';
+import { useEvaluatedStore } from '../engine/evaluatedStore.ts';
+import { setViewportRefresh, showFrame } from '../engine/frame.ts';
 import { controller, publishStatus, setInvalidate, viewport } from '../engine/studioEngine.ts';
 import { useDocumentStore } from '../state/documentStore.ts';
+import { usePlaybackStore } from '../state/playbackStore.ts';
 import { useUiStore } from '../state/uiStore.ts';
 
 /** Keeps the engine in sync with the document and wires it into the R3F scene. */
@@ -18,33 +21,31 @@ export function SceneBridge() {
     viewport.gl = gl;
     viewport.scene = scene;
     viewport.camera = camera;
-    const post = new PostStack(gl);
+    const post = new PostStack(gl, controller.background);
     viewport.post = post;
     controller.attach(scene, { content: false });
 
     const apply = () => {
-      const { doc } = useDocumentStore.getState();
-      controller.sync(doc);
-      applyRenderSettings(gl, doc.render);
-      const [px, py, pz] = doc.camera.position;
-      const [tx, ty, tz] = doc.camera.target;
-      post.sync(doc.effects, {
-        frameHeight: doc.frame.height,
-        render: doc.render,
-        context: {
-          focusDistance: Math.hypot(px - tx, py - ty, pz - tz),
-          lut: (uri) => controller.luts.get(uri),
-        },
-      });
+      const { time } = usePlaybackStore.getState();
+      const { doc } = showFrame(useDocumentStore.getState().doc, time);
+      useEvaluatedStore.setState({ doc, time });
       publishStatus();
       invalidate();
     };
     apply();
+    setViewportRefresh(apply);
     const unsubscribe = useDocumentStore.subscribe((state, previous) => {
       if (state.doc !== previous.doc) apply();
     });
+    const unsubscribePlayback = usePlaybackStore.subscribe((state, previous) => {
+      if (state.playing !== previous.playing) controller.setPlaying(state.playing);
+      if (state.time !== previous.time || state.playing !== previous.playing) apply();
+    });
     return () => {
       unsubscribe();
+      unsubscribePlayback();
+      setViewportRefresh(() => {});
+      controller.setPlaying(false);
       controller.detach();
       post.dispose();
       viewport.post = null;

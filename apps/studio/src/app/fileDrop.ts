@@ -1,3 +1,4 @@
+import { importVideoFile, setBackgroundMedia } from '../features/cover/media.ts';
 import { importHdriFile } from '../features/environment/importHdri.ts';
 import { importFontFile } from '../features/fonts/fontAssets.ts';
 import { updateText } from '../features/inspector/edit.ts';
@@ -48,6 +49,12 @@ export async function handleFiles(files: File[]): Promise<void> {
       } else if (kind === 'lut') {
         await importLutFile(file);
         notify(`LUT "${file.name}" applied`, 'success');
+      } else if (kind === 'video') {
+        await importVideoFile(file);
+      } else if (kind === 'image' && useUiStore.getState().inspectorTab === 'cover') {
+        // In the Cover tab, an image becomes the background.
+        if (file === files.find((candidate) => /\.(png|jpe?g|webp|avif)$/i.test(candidate.name)))
+          await setBackgroundMedia(file, 'image');
       } else if (kind === 'image') {
         const images = files.filter((candidate) =>
           /\.(png|jpe?g|webp|avif)$/i.test(candidate.name),

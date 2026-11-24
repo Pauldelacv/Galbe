@@ -50,7 +50,7 @@ describe('overlays', () => {
       createOverlay({ text: 'Hello', position: [0.5, 0.25], rotation: 90, uppercase: true }),
       createOverlay({ text: 'hidden', visible: false }),
     ];
-    drawOverlays(context, overlays, { width: 200, height: 100 }, () => 'Galbe Inter');
+    drawOverlays(context, overlays, { width: 200, height: 100 }, () => '"Galbe Inter"');
     expect(calls).toContain('translate 100 25');
     expect(calls).toContain('rotate 1.571');
     expect(calls.some((c) => c.startsWith('text HELLO'))).toBe(true);

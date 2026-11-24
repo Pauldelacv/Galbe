@@ -62,7 +62,9 @@ describe('paths', () => {
     expect(doc.nodes[0]!.transform.position[1]).toBe(0);
     // Unrelated branches are shared.
     expect(out.materials).toBe(doc.materials);
-    expect(out.nodes[0]!.font).toBe(doc.nodes[0]!.font);
+    expect((out.nodes[0] as { font?: unknown }).font).toBe(
+      (doc.nodes[0] as { font?: unknown }).font,
+    );
   });
 });
 

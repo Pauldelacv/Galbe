@@ -3,6 +3,16 @@ import { useDocumentStore } from './documentStore.ts';
 
 export type GizmoMode = 'translate' | 'rotate' | 'scale';
 export type DialogId = 'export' | 'projects' | 'shortcuts' | null;
+export type GridGuide = 'off' | 'thirds' | 'columns' | 'golden';
+
+export interface Guides {
+  /** Title- and action-safe margins (and platform UI zones for 9:16). */
+  safe: boolean;
+  grid: GridGuide;
+  /** Columns of the `columns` grid. */
+  columns: number;
+  center: boolean;
+}
 
 export interface UiState {
   selection: string[];
@@ -15,7 +25,10 @@ export interface UiState {
   focusTextRequest: number;
   saveState: { status: 'idle' | 'saving' | 'saved' | 'error'; at?: number; message?: string };
   /** Inspector tab. */
-  inspectorTab: 'layer' | 'scene' | 'effects';
+  inspectorTab: 'layer' | 'scene' | 'cover' | 'effects';
+  /** Overlay being edited in the Cover tab. */
+  activeOverlay: string | null;
+  guides: Guides;
   /** Left panel tab. */
   leftTab: 'layers' | 'history';
   /** Effect whose params are expanded in the effects panel. */
@@ -33,6 +46,18 @@ export interface UiState {
   setLeftTab: (tab: UiState['leftTab']) => void;
   setExpandedEffect: (id: string | null) => void;
   setActivePath: (id: string | null) => void;
+  setActiveOverlay: (id: string | null) => void;
+  setGuides: (guides: Partial<Guides>) => void;
+}
+
+const GUIDES_KEY = 'galbe:guides';
+function readGuides(): Guides {
+  const fallback: Guides = { safe: false, grid: 'off', columns: 6, center: false };
+  try {
+    return { ...fallback, ...(JSON.parse(localStorage.getItem(GUIDES_KEY) ?? '{}') as object) };
+  } catch {
+    return fallback;
+  }
 }
 
 export const useUiStore = create<UiState>()((set) => ({
@@ -47,6 +72,8 @@ export const useUiStore = create<UiState>()((set) => ({
   leftTab: 'layers',
   expandedEffect: null,
   activePath: null,
+  activeOverlay: null,
+  guides: readGuides(),
 
   select: (ids, mode = 'replace') =>
     set((state) => {
@@ -73,6 +100,17 @@ export const useUiStore = create<UiState>()((set) => ({
       inspectorTab: expandedEffect ? 'effects' : useUiStore.getState().inspectorTab,
     }),
   setActivePath: (activePath) => set({ activePath }),
+  setActiveOverlay: (activeOverlay) => set({ activeOverlay }),
+  setGuides: (guides) =>
+    set((state) => {
+      const next = { ...state.guides, ...guides };
+      try {
+        localStorage.setItem(GUIDES_KEY, JSON.stringify(next));
+      } catch {
+        // Storage unavailable: keep guides for this session only.
+      }
+      return { guides: next };
+    }),
 }));
 
 // Drop selected ids that no longer exist (after undo, delete, project switch).
