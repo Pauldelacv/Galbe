@@ -1,4 +1,5 @@
 export * from './assets.ts';
+export * from './effects.ts';
 export * from './factories.ts';
 export * from './galbe-file.ts';
 export * from './ids.ts';
@@ -9,4 +10,5 @@ export * from './schema/common.ts';
 export * from './schema/document.ts';
 export * from './schema/material.ts';
 export * from './schema/nodes.ts';
+export * from './transform.ts';
 export * from './version.ts';

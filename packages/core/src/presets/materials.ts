@@ -183,7 +183,7 @@ export const MATERIAL_PRESETS: readonly MaterialPreset[] = [
     id: 'neon',
     name: 'Neon glow',
     category: 'special',
-    description: 'Emissive tube colour; pairs with bloom (v0.2).',
+    description: 'Emissive tube colour; pairs with the Bloom effect.',
     spec: {
       name: 'Neon',
       color: '#ff3df2',
@@ -194,7 +194,71 @@ export const MATERIAL_PRESETS: readonly MaterialPreset[] = [
     },
     swatch: 'radial-gradient(circle,#ffffff 0 10%,#ff7af6 30%,#ff1fe9 60%,#5c0055)',
   },
+  {
+    id: 'holographic',
+    name: 'Holographic foil',
+    category: 'special',
+    description: 'Silver foil with a view-dependent rainbow and fine diffraction lines.',
+    spec: {
+      name: 'Holographic',
+      color: '#d8dce4',
+      metalness: 1,
+      roughness: 0.18,
+      holographic: {
+        enabled: true,
+        strength: 1.1,
+        bands: 2.5,
+        shift: 0,
+        fresnel: 0.8,
+        lines: 0.35,
+      },
+    },
+    swatch:
+      'linear-gradient(120deg,#ff9ad5,#ffe27a 20%,#9dffb0 40%,#7ad7ff 60%,#c59bff 80%,#ff9ad5)',
+  },
+  {
+    id: 'satin-paint',
+    name: 'Satin paint',
+    category: 'solid',
+    description: 'Car-paint style colour under a glossy clear coat.',
+    spec: {
+      name: 'Satin paint',
+      color: '#1f4fff',
+      metalness: 0.45,
+      roughness: 0.42,
+      clearcoat: 1,
+      clearcoatRoughness: 0.04,
+    },
+    swatch: 'radial-gradient(circle at 30% 25%,#c9d6ff 0 8%,#2c5bff 35%,#091a66 100%)',
+  },
 ];
+
+/** A matcap look shipped with Galbe (`builtin:matcaps/<id>`). */
+export interface MatcapPreset {
+  id: string;
+  name: string;
+  /** Builtin asset id of the matcap image. */
+  asset: string;
+}
+
+/**
+ * Bundled matcaps, rendered by `packages/assets/scripts/matcaps.mjs` from Galbe's CC0
+ * HDRIs (so they are original and CC0 as well).
+ */
+export const MATCAP_PRESETS: readonly MatcapPreset[] = [
+  { id: 'chrome-studio', name: 'Studio chrome', asset: 'matcaps/chrome-studio' },
+  { id: 'chrome-sunset', name: 'Sunset chrome', asset: 'matcaps/chrome-sunset' },
+  { id: 'chrome-neon', name: 'Neon chrome', asset: 'matcaps/chrome-neon' },
+  { id: 'clay-soft', name: 'Soft clay', asset: 'matcaps/clay-soft' },
+  { id: 'clay-warm', name: 'Warm clay', asset: 'matcaps/clay-warm' },
+  { id: 'gloss-black', name: 'Glossy black', asset: 'matcaps/gloss-black' },
+  { id: 'pearl', name: 'Pearl', asset: 'matcaps/pearl' },
+  { id: 'toon', name: 'Toon', asset: 'matcaps/toon' },
+];
+
+export function getMatcapPreset(id: string): MatcapPreset | undefined {
+  return MATCAP_PRESETS.find((preset) => preset.id === id);
+}
 
 export const DEFAULT_MATERIAL_PRESET_ID = 'chrome';
 
