@@ -57,8 +57,10 @@ describe('animation in the engine', () => {
     const id = doc.nodes[0]!.id;
     const positions = () =>
       Array.from(meshOf(controller, id).geometry.getAttribute('position').array);
-    const atEnd = (controller.syncAt(doc, 4), positions());
-    const atStart = (controller.syncAt(doc, 0), positions());
+    controller.syncAt(doc, 4);
+    const atEnd = positions();
+    controller.syncAt(doc, 0);
+    const atStart = positions();
     // Hidden letters collapse to their centres.
     expect(atStart).not.toEqual(atEnd);
     const still = produce(doc, (draft) => {
