@@ -6,7 +6,7 @@ judged on two things: **does it make better images**, and **is it pleasant to us
 - [Setup](#setup)
 - [Ground rules](#ground-rules)
 - [Where things live](#where-things-live)
-- [Recipes](#recipes): add a material · an effect · a template · an AI provider · a font or HDRI
+- [Recipes](#recipes): add a material · an effect · a template · an AI provider · a font, HDRI or matcap
 - [Pull requests](#pull-requests)
 
 ## Setup
@@ -77,26 +77,43 @@ unspecified fields use schema defaults. Applying a preset **copies** its values 
 document, so tuning a preset later never changes existing projects. Check it under several
 HDRIs, then run `pnpm test` (every preset is validated).
 
-### Add a post-processing effect (v0.2)
+### Add a post-processing effect
 
-Effects are registered in the engine's effect registry (`packages/engine/src/effects`):
+An effect has two halves:
 
-```ts
-registerEffect({
-  type: 'my-effect',
-  label: 'My effect',
-  params: z.object({ intensity: z.number().min(0).max(1).default(0.5) }), // UI is generated from this
-  create: (params, context) => new MyEffect(params), // a `postprocessing` Effect
-  update: (effect, params) => {
-    effect.intensity = params.intensity;
-  },
-});
-```
+1. **Its definition** — plain data in `packages/core/src/effects.ts` (`EFFECT_DEFINITIONS`):
+   type, label, stage and params. Params are self-describing (`number`, `boolean`, `color`,
+   `select`, `asset`) with ranges and defaults; they drive validation, defaults **and** the
+   inspector UI, which is generated from them.
 
-Rules: parameters are validated by Zod and stored in `doc.effects`; effects must be
-deterministic for a given `(params, time)`; screen-space effects must use the full-frame
-resolution and tile offset they receive, so tiled 8K exports have no seams. Custom GLSL is
-welcome — write it yourself and keep it in the effect's file.
+   ```ts
+   {
+     type: 'posterize',
+     label: 'Posterize',
+     description: 'Reduces the number of colour levels.',
+     stage: 'display', // 'hdr' runs before tone mapping (bloom, DOF), 'display' after
+     params: { levels: num('Levels', 6, 2, 32, { integer: true, step: 1, precision: 0 }) },
+   }
+   ```
+
+2. **Its implementation** — registered in the engine (`packages/engine/src/effects`):
+
+   ```ts
+   registerEffect('posterize', {
+     create: () => new GalbeEffect('Posterize', glsl, { levels: 6 }),
+     update: (effect, params, frame) => {
+       (effect as GalbeEffect).setFrame(frame);
+       (effect as GalbeEffect).set('levels', params.levels);
+     },
+   });
+   ```
+
+Rules: effects must be deterministic for a given document (seed any noise; no clock);
+screen-space effects extend `GalbeEffect` and work in **full-frame pixels**
+(`framePx(uv)`, `tileUv(px)`) with sizes multiplied by `uPxScale`, so the viewport matches
+exports and tiled 8K exports have no seams. Colour work happens in display space
+(`toSrgb` / `toLinear`). Write your own GLSL and keep it in the effect's file. Avoid GLSL
+reserved words as identifiers (`active`, `half`, `input`, `output`…).
 
 ### Add a template (v0.4)
 

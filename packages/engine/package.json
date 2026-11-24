@@ -1,6 +1,6 @@
 {
   "name": "@galbe/engine",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Galbe's framework-free three.js runtime: turns a Galbe document into a renderable scene.",
   "license": "MIT",
   "type": "module",

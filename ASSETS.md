@@ -56,10 +56,36 @@ CC0 as well.
 | Open sky        | `hdri/kloofendal-sky.hdr`       | [Kloofendal 48d Partly Cloudy (Pure Sky)](https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky) — Greg Zaal, Jarod Guest | CC0-1.0 |
 | City night      | `hdri/shanghai-bund.hdr`        | [Shanghai Bund](https://polyhaven.com/a/shanghai_bund) — Greg Zaal                                                               | CC0-1.0 |
 
+## Matcaps — CC0 1.0 (public domain)
+
+Eight 256 × 256 matcaps rendered by `packages/assets/scripts/matcaps.mjs` from the bundled
+CC0 HDRIs above (mirror reflection, diffuse irradiance or a mix, computed analytically).
+They are original images derived only from CC0 sources and are released as CC0.
+
+| Name          | File                        | Derived from                      |
+| ------------- | --------------------------- | --------------------------------- |
+| Studio chrome | `matcaps/chrome-studio.png` | Softbox studio (Studio Small 09)  |
+| Sunset chrome | `matcaps/chrome-sunset.png` | Sunset (Venice Sunset)            |
+| Neon chrome   | `matcaps/chrome-neon.png`   | Neon studio (Neon Photostudio)    |
+| Soft clay     | `matcaps/clay-soft.png`     | Softbox studio (Studio Small 09)  |
+| Warm clay     | `matcaps/clay-warm.png`     | Contrast studio (Studio Small 03) |
+| Glossy black  | `matcaps/gloss-black.png`   | Contrast studio (Studio Small 03) |
+| Pearl         | `matcaps/pearl.png`         | Softbox studio (Studio Small 09)  |
+| Toon          | `matcaps/toon.png`          | — (procedural)                    |
+
+## Downloaded on demand (not bundled)
+
+- **2K / 4K HDRIs** (Scene › Lighting › Quality) are fetched from Poly Haven
+  (`dl.polyhaven.org`, CC0) only when the user picks them, then cached in the browser.
+- **PBR texture sets** are never downloaded by Galbe: the inspector links to
+  [ambientCG](https://ambientcg.com) and [Poly Haven](https://polyhaven.com/textures)
+  (both CC0); users download a set and drop it into the studio.
+
 ## Code-generated content
 
-Material presets, frame presets and the starter scene are original data written for
-Galbe (`packages/core/src/presets`) and are covered by the project's MIT licence.
+Material presets, frame presets, the built-in LUT looks (computed in
+`packages/engine/src/effects/luts.ts`), the ASCII effect's 5 × 7 glyphs and the starter
+scene are original data written for Galbe and are covered by the project's MIT licence.
 
 ## Third-party libraries
 
@@ -69,6 +95,7 @@ their code is vendored into this repository. The main ones:
 | Library                                                                            | Licence                    |
 | ---------------------------------------------------------------------------------- | -------------------------- |
 | three.js, React, React Three Fiber, drei, Zustand, Immer, Zod, opentype.js, fflate | MIT                        |
+| postprocessing (effect composer, bloom, depth of field, tone mapping)              | Zlib                       |
 | idb, lucide-react                                                                  | ISC                        |
 | clipper-lib (polygon boolean operations for glyph outlines)                        | Boost Software License 1.0 |
 

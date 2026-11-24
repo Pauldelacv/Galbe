@@ -29,21 +29,28 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ✅ README, CONTRIBUTING, CODE_OF_CONDUCT, ASSETS, issue & PR templates
 - ✅ Undo/redo (planned for v0.2, landed early: transactions for drags, camera excluded)
 
-## v0.2 — Shape, Object, materials & effects ⬜
+## v0.2 — Shape, Object, materials & effects ✅
 
-- ⬜ Shape tool: SVG import (file, paste from Figma/Illustrator), holes, one colour per path
-- ⬜ Parametric primitives: sphere, torus, rounded box, capsule, ring, noise blob
-- ⬜ Object tool: GLB/GLTF/FBX/OBJ import, scale & pivot normalisation, material override
-- ⬜ Full material editor, custom material library (saved locally), PBR textures (ambientCG),
-  matcaps, video textures, holographic shader
-- ⬜ Add procedural node-based materials
-- ⬜ Additional lights (directional, point, spot) UI, reflective ground
-- ⬜ Post-processing stack (reorderable): bloom, DOF, chromatic aberration, grain, vignette,
-  halftone, dithering, pixel, ASCII, glitch, LUT; extensible GLSL effect registry
-- ⬜ History panel (undo/redo itself shipped in v0.1)
-- ⬜ Multi-selection gizmo, grouping UI, layer re-parenting
-- ⬜ Move text geometry and deformations to a Web Worker / GPU for long texts
-- ⬜ On-demand high-resolution HDRIs (2K/4K) for large exports
+- ✅ Shape tool: SVG import (file, drop, paste from Figma/Illustrator), holes and fill rules,
+  strokes turned into outlines, one material per source colour (or per path), layer gap
+- ✅ Parametric primitives: sphere, rounded box, torus, capsule, cylinder, cone, ring,
+  noise blob (seeded)
+- ✅ Object tool: GLB/GLTF (embedded)/FBX/OBJ import, fit size & pivot normalisation,
+  material override
+- ✅ Material editor: physical (all parameters) or matcap, multi-edit, per-path materials,
+  custom material library (saved locally), PBR textures (drop an ambientCG / Poly Haven
+  zip, maps matched by name), UV repeat/offset/rotation, 8 original matcaps + import,
+  holographic layer, 2 new presets (holographic foil, satin paint)
+- ✅ Additional lights UI (directional, point, spot), reflective floor
+- ✅ Post-processing stack (reorderable): bloom, depth of field, colour adjust, LUT (.cube +
+  6 built-in looks), chromatic aberration, vignette, film grain, halftone, dithering,
+  pixelate, ASCII, glitch; self-describing effect registry (UI generated from params)
+- ✅ History panel
+- ✅ Multi-selection gizmo, grouping (Ctrl/⌘ G, ⇧ to ungroup), layer re-parenting by drag & drop
+- ✅ On-demand 2K/4K HDRIs from Poly Haven for large exports
+- ➡️ Procedural node-based materials — moved to Later (needs its own node editor)
+- ➡️ Video textures — moved to v0.3 (they need the timeline's deterministic time)
+- ➡️ Text/shape geometry in a Web Worker — moved to v0.3 (with per-letter animation)
 
 ## v0.3 — Motion & Cover ⬜
 
@@ -54,6 +61,9 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
   WebM VP9 with alpha, PNG sequence fallback
 - ⬜ Cover tool: gradient (linear, radial, mesh), image and video backgrounds, 2D text
   overlays, safe zones and grid
+- ⬜ Video textures (from v0.2), driven by the timeline's deterministic time
+- ⬜ Text and shape geometry built in a Web Worker (from v0.2), for long texts and
+  per-letter animation
 
 ## v0.4 — 3D export, embeds & templates ⬜
 
@@ -63,9 +73,49 @@ short "what works / what's missing / known bugs" note at the bottom of its secti
 - ⬜ 12 original templates shipped as `.galbe` files (chrome logo, glass type, 9:16 key visual,
   3D sticker…)
 
+## Later ⬜
+
+- ⬜ Procedural node-based materials (from v0.2), with their own node editor
+- ⬜ On-canvas light helpers and gizmos
+
 ---
 
 ## Milestone notes
+
+### v0.2 — 2026-11-24
+
+**Works**
+
+- Shapes from SVG files or the clipboard (tested with nested transforms, `evenodd` holes,
+  strokes); each path extrudes separately and stacks along Z, so overlapping fills never
+  z-fight. Alt-click a path in the viewport to edit only its material.
+- Eight primitives with live parameters; noise blobs are identical for the same seed.
+- GLB/GLTF/FBX/OBJ models load lazily (loaders are split into their own chunks), keep
+  their own materials or take the node material.
+- Effects preview live and export identically; Galbe's screen-space effects work in
+  full-frame pixels, so tiled exports have no seams and sizes scale with resolution.
+- Reflective floor, extra lights, matcaps, holographic foil, texture sets, LUTs.
+- 144 unit tests (core, engine, exporters, studio) and 6 Playwright tests (3 new: SVG paste
+  and per-path materials; primitives, GLB, grouping and history; effects in viewport and
+  export).
+
+**Missing / deferred**
+
+- Procedural node materials (Later), video textures and worker geometry (v0.3), see above.
+- Multi-file `.gltf` (with external `.bin`/textures) is refused with a hint to use `.glb`.
+- SVG gradients and patterns import as a flat colour (the first stop is not used yet: the
+  path's fill colour falls back to white).
+- No on-canvas helpers for lights yet (they are edited numerically in Scene › Lights).
+
+**Known issues**
+
+- Bloom and depth of field spread over a fixed fraction of the _tile_: exports larger than
+  the GPU's render-buffer limit (tiled) can show slightly different glow near tile edges.
+  Exports up to the GPU limit (16K on most desktop GPUs) render in one tile.
+- The reflective floor mirrors with a planar reflection: very rough settings blur through
+  mip levels and can look blocky at extreme blur values.
+- Software WebGL (CI) produced NaN depth on some torus fragments in the contact-shadow pass;
+  the shaders now discard them, but the root cause was not isolated.
 
 ### v0.1 — 2026-11-23
 

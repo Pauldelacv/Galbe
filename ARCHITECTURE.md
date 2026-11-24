@@ -127,17 +127,18 @@ GalbeDocument {
     | { type: 'color'; color }
     | { type: 'environment'; blur; intensity }
   camera: { fov; position: Vec3; target: Vec3; near; far }
-  environment: { hdri: AssetUri | null; intensity; rotation; }
-  ground: { contactShadow: { enabled; opacity; blur; resolution; far; color } ; offset }
+  environment: { hdri: AssetUri | null; intensity; rotation; resolution: '1k'|'2k'|'4k' }
+  ground: { contactShadow: { enabled; opacity; blur; resolution; far; color }; offset; scale;
+            reflection: { enabled; strength; blur; fade; color; floorOpacity } }
   lights: Light[]                       // directional | point | spot (additional to HDRI)
   render: { toneMapping: 'neutral'|'agx'|'aces'|'none'; exposure }
 
   materials: Record<MaterialId, MaterialSpec>   // document material library
   nodes: SceneNode[]                            // flat list, ordered, with parentId
   assets: Record<AssetId, AssetEntry>           // metadata; binaries live in IDB / zip
+  effects: EffectSpec[]                         // post-processing stack, ordered (v0.2)
 
   // later milestones (additive, optional with defaults → no migration needed)
-  effects?: EffectSpec[]          // v0.2 post-processing stack, ordered
   animation?: AnimationSpec       // v0.3 timeline (duration, fps, tracks, presets)
   overlays?: OverlayLayer[]       // v0.3 Cover 2D text layers
 }
@@ -163,17 +164,39 @@ TextNode extends NodeBase {
   materialId: MaterialId
 }
 GroupNode   { type: 'group' }
-// v0.2: ShapeNode (SVG paths, per-path material), PrimitiveNode, ModelNode
+
+ShapeNode extends NodeBase {           // v0.2 — extruded SVG artwork
+  type: 'shape'
+  source: AssetUri | null              // the original .svg, for provenance
+  viewBox: [x, y, w, h]
+  paths: { id; name; d /* normalised: absolute, transforms baked, M L C Q Z only */;
+           fillRule: 'nonzero'|'evenodd'; stroke: { width; join; cap } | null;
+           sourceColor; visible; materialId?; depthScale }[]
+  size /* longest side */; depth; curveSegments; bevel; layerSpacing; deform
+  materialId: MaterialId               // fallback for paths without their own
+}
+PrimitiveNode { type: 'primitive'; kind: 'sphere'|'roundedBox'|'torus'|'capsule'|
+                'cylinder'|'cone'|'ring'|'blob'; params: { radius; size; tube; … noise };
+                smooth; materialId }
+ModelNode   { type: 'model'; source: AssetUri; format: 'glb'|'gltf'|'fbx'|'obj';
+              fitSize; pivot: 'center'|'bottom'|'original'; overrideMaterial; materialId }
 ```
+
+Shape paths are normalised **at import** (the studio parses SVG with three's `SVGLoader`,
+which needs a DOM) into plain path data, so the engine builds geometry anywhere — Node
+tests, workers, the embed player — without a DOM. `nodeMaterialIds(node)` lists every
+material a node uses (shape paths included); pruning, duplication and validation use it.
 
 The flat list + `parentId` keeps reordering, selection and diffing simple while still
 supporting hierarchy. Array order = draw/list order.
 
-**Materials** are a discriminated union on `type` (`'physical'` in v0.1, `'matcap'` in
-v0.2) mapping 1:1 onto `THREE.MeshPhysicalMaterial` parameters: colour, metalness,
-roughness, transmission/IOR/thickness/dispersion/attenuation, clearcoat, sheen,
-iridescence, anisotropy, specular, emissive, opacity, env intensity. Texture slots
-(`map`, `normalMap`, `roughnessMap`… as `AssetUri`) arrive in v0.2. **Presets** are plain
+**Materials** are a discriminated union on `type`. `'physical'` maps 1:1 onto
+`THREE.MeshPhysicalMaterial` parameters (colour, metalness, roughness,
+transmission/IOR/thickness/dispersion/attenuation, clearcoat, sheen, iridescence,
+anisotropy, specular, emissive, opacity, env intensity), plus texture slots (`map`,
+`normalMap`, `roughnessMap`, `metalnessMap`, `aoMap`, `emissiveMap`, `alphaMap` as
+`AssetUri`), one shared UV transform and a `holographic` layer (v0.2). `'matcap'` (v0.2)
+maps onto `MeshMatcapMaterial` (matcap image, tint, opacity). **Presets** are plain
 data in `@galbe/core/presets`: applying a preset copies its spec into the document, so
 documents never depend on preset definitions that might change later.
 
@@ -240,7 +263,7 @@ thumbnail.png         optional, for file browsers and the project list
                THREE.Scene  ──►  frame render
                                    1. pre-passes  (contact shadow depth + blur)
                                    2. scene render (transmission pass handled by three)
-                                   3. post stack  (v0.2: EffectComposer from effect registry)
+                                   3. post stack  (when effects are enabled, see 4.4)
                                    4. output      (tone mapping + sRGB)
 ```
 
@@ -248,8 +271,19 @@ thumbnail.png         optional, for file browsers and the project list
   disposes one object per node. Each builder computes a _build key_ from the
   parameters that affect geometry (text, font, size, depth, bevel, deform…). If the key
   is unchanged, only cheap properties (transform, visibility, material) are touched.
-  Rebuilds are synchronous for v0.1; moving geometry builds to a Web Worker is planned
-  once Shape/Object nodes land.
+  Rebuilds are synchronous; moving text/shape builds to a Web Worker is planned for v0.3.
+  Builders: text (4.2), shapes (one mesh per path, stacked by `layerSpacing`, Clipper
+  boolean union per fill rule, `ClipperOffset` for strokes, then the same extrusion and
+  deformers as text), primitives (three geometries plus a seeded simplex-noise blob) and
+  models (`ModelLibrary` parses each asset once, lazily importing GLTF/FBX/OBJ loaders;
+  nodes get a clone, scaled to `fitSize` and offset to the chosen pivot).
+- **MaterialLibrary** creates a `MeshPhysicalMaterial` or `MeshMatcapMaterial` per
+  document material; textures come from a `TextureLibrary` (one load per asset and colour
+  space, one clone per material for its UV transform). The holographic layer is injected
+  with `onBeforeCompile` and only compiled in when enabled (`customProgramCacheKey`).
+- **ReflectiveGround** is three's `Reflector` with Galbe's shader: the mirror image is
+  blurred through its mip chain and faded at the floor's edge. It copies the camera's
+  projection, so export tiles (view offsets) reflect correctly.
 - **Hosts** decide _when_ to render. The studio uses R3F with `frameloop="demand"`
   and mounts the controller's group with `<primitive>`; the player (v0.4) runs its own
   minimal loop; exporters render on demand.
@@ -295,14 +329,36 @@ thumbnail.png         optional, for file browsers and the project list
   two separable passes, displayed on a ground plane. The texture is view-independent,
   so it does not need re-rendering for export tiles.
 
-### 4.4 Post-processing (v0.2)
+### 4.4 Post-processing
 
-An **effect registry** maps `EffectSpec.type` → `{ params schema (Zod), create(),
-update() }` built on `postprocessing`. The document stores an ordered `effects[]`; the
-engine rebuilds the `EffectComposer` pass list when the order or set changes and
-updates uniforms otherwise. Custom GLSL effects register the same way. Screen-space
-effects receive the full-frame resolution and the tile offset so tiled exports have
-no seams.
+Effects are described **once, as data**, in `@galbe/core` (`EFFECT_DEFINITIONS`): each has
+a type, a stage and self-describing params (kind, range, default, label, visibility
+rules). Documents store `{ id, type, enabled, params }`; `resolveEffectParams` clamps and
+defaults them, unknown types (plugins, newer files) are kept untouched. The studio
+generates the effect inspector from the definitions.
+
+The engine's **`PostStack`** (built on `postprocessing`) maps types to implementations
+(`registerEffect`) and renders:
+
+```
+RenderPass (HalfFloat, MSAA ×4; colour background removed)
+  → sanitize (NaN/∞ from half-float overflow)            only when an HDR effect is on
+  → HDR effects in order: bloom, depth of field           linear light
+  → tone mapping (the document's mode)                     one pass
+  → background composite (flat colour, never tone-mapped, as without effects)
+  → display effects in order, one pass each               sRGB-aware, may read neighbours
+  → canvas (sRGB)
+```
+
+With no enabled effect the host renders directly (zero overhead). Any change to the set
+or order rebuilds the composer; param changes only update uniforms. Galbe's own effects
+(`GalbeEffect`) work in **full-frame pixel coordinates** — the renderer passes the tile
+offset and the full output size — and express sizes in document pixels multiplied by
+`uPxScale` (render pixels per document pixel). The viewport preview therefore matches
+exports at any scale, and tiled exports have no seams; tiles are padded by the stack's
+reach (`PostStack.support`). Grain and glitch are seeded, never time-based. LUTs come from
+`.cube` files (`parseCubeLut`) or procedural looks, loaded with the document so exports
+never miss them.
 
 ### 4.5 Animation (v0.3)
 
@@ -324,8 +380,14 @@ is identical regardless of machine speed.
     single undo step while the viewport updates live.
   - History stores document snapshots (cheap thanks to structural sharing). Camera
     moves are excluded from history: restoring a snapshot keeps the current camera.
-- **`useUiStore`**: selection, active tool, panel visibility, dialogs, `interacting`
-  flag (drives adaptive quality), viewport overlays (grid, safe zones).
+- **`useUiStore`**: selection, active shape path, inspector and left-panel tabs, expanded
+  effect, panel visibility, dialogs, `interacting` flag (drives adaptive quality).
+- **History panel**: lists `past` / `future` labels; clicking an entry calls
+  `step(delta)`, i.e. repeated undo/redo.
+- **Grouping** (`groupNodes`, `ungroupNodes`, `reparentNode` in core) preserves world
+  transforms with a small dependency-free matrix module (`@galbe/core/transform`). The
+  multi-selection gizmo moves a pivot at the selection's centre and applies its delta to
+  each top-level selected node in its parent's space.
 - Components subscribe with selectors; the viewport bridge subscribes imperatively
   and calls `controller.sync(doc)` without re-rendering React.
 
@@ -341,11 +403,16 @@ is identical regardless of machine speed.
 
 ### 5.3 Persistence
 
-- IndexedDB database `galbe` (via `idb`): `projects` (document + thumbnail + dates) and
-  `assets` (content-addressed blobs shared across projects).
+- IndexedDB database `galbe` (via `idb`, version 2): `projects` (document + thumbnail +
+  dates), `assets` (content-addressed blobs shared across projects), `library` (the user's
+  saved materials, with the metadata of the assets they use) and `cache` (re-downloadable
+  files such as 2K/4K HDRIs).
 - Autosave is debounced (≈ 600 ms after the last change) and flushed on
   `visibilitychange`/`pagehide`. The last opened project reopens on launch.
-- Import/export of `.galbe` files, and drag & drop of `.galbe`, fonts and `.hdr` files.
+- Import/export of `.galbe` files. Drag & drop, the file picker and the clipboard route
+  files by kind (`app/fileDrop.ts`): `.galbe`, fonts, `.hdr`, SVG (→ shape), models,
+  images and zipped texture sets (→ the selection's material, maps matched by file name),
+  `.cube` (→ the LUT effect). Pasted SVG markup becomes a shape.
 
 ### 5.4 UI system
 
